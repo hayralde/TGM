@@ -446,16 +446,14 @@
 
   function renderStatTiles() {
     var rows = ptRows();
-    var totalHours = 0, done = 0, andamento = 0;
+    var done = 0, andamento = 0;
     rows.forEach(function(row) {
-      totalHours += parseFloat(row.getAttribute('data-hours')) || 0;
       var s = rowStatusKey(row);
       if (s === 'concluida') done++;
       if (s === 'andamento') andamento++;
     });
     var tiles = [
       { val: rows.length, lbl: 'tarefas cadastradas' },
-      { val: totalHours.toFixed(1) + 'h', lbl: 'horas alocadas' },
       { val: done, lbl: 'concluídas' },
       { val: andamento, lbl: 'em andamento' }
     ];
