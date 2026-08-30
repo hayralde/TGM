@@ -13,7 +13,9 @@ Estrutura de indicadores clonada do painel da Parada Elétrica (`hayralde/rrp`),
 
 ## Backend (status compartilhado)
 
-As tarefas em si (data, turno, TAG, atividade, duração) vivem direto no `index.html` — sem backend. Só o **status** de cada tarefa (Pendente/Em Andamento/Concluída) é compartilhado entre todos os visitantes, salvo na tabela `tgm_task_status` do projeto Supabase `hayralde's Project` (`rsqbbcsaqmxfriwwbamv`). Qualquer visitante pode alterar o status — não há login. A página consulta essa tabela a cada 5s para refletir o que outros visitantes marcaram.
+As tarefas em si (data, turno, TAG, atividade, duração) vivem direto no `index.html` — sem backend. Só o **status** de cada tarefa (Pendente/Em Andamento/Concluída) é compartilhado entre todos os visitantes, salvo na tabela `tgm_task_status` do projeto Supabase `hayralde's Project` (`rsqbbcsaqmxfriwwbamv`). A página consulta essa tabela a cada 5s para refletir o que outros visitantes marcaram.
+
+Alterar o status pede uma senha (`rrp`, ver `EDIT_PASSWORD` no `index.html`) — pedida uma vez por sessão do navegador (guardada em `sessionStorage`, não persiste entre sessões). Isso é só uma barreira leve contra alterações acidentais/de curiosos: a senha fica visível no código-fonte da página, então não serve como controle de acesso real.
 
 ## Como adicionar tarefas novas
 
