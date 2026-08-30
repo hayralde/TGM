@@ -119,8 +119,10 @@
     .wrap { padding: 16px 12px 40px; }
     header.top h1 { font-size: 21px; }
     .panel { padding: 14px 12px; }
-    .stat-tile { min-width: 130px; padding: 10px 12px; }
-    .stat-tile .val { font-size: 21px; }
+    .stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .stat-tile { min-width: 0; padding: 8px 6px; text-align: center; }
+    .stat-tile .val { font-size: 18px; }
+    .stat-tile .lbl { font-size: 10.5px; line-height: 1.25; }
     .filter-bar { gap: 10px; }
     .filter-field { flex: 1 1 100%; }
     .filter-field select { min-width: 0; width: 100%; }
