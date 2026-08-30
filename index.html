@@ -264,7 +264,7 @@
     <div class="table-scroll">
     <table id="pt-table">
       <thead>
-        <tr><th>Data</th><th>Horário</th><th>Turno</th><th>TAG</th><th>Atividade</th><th>Duração</th><th>Status</th></tr>
+        <tr><th>#</th><th>Data</th><th>Horário</th><th>Turno</th><th>TAG</th><th>Atividade</th><th>Duração</th><th>Status</th></tr>
       </thead>
       <tbody id="pt-tbody">
         <tr data-date="2026-08-27" data-setor="1º Turno" data-resp="BTE-40" data-os="BTE-40-01" data-hours="4" data-key="tgm-1">
@@ -877,7 +877,20 @@
     window.print();
   }
 
+  function renderRowNumbers() {
+    ptRows().forEach(function(row, idx) {
+      var cell = row.querySelector('.pt-num-cell');
+      if (!cell) {
+        cell = document.createElement('td');
+        cell.className = 'pt-num-cell num';
+        row.insertBefore(cell, row.firstChild);
+      }
+      cell.textContent = idx + 1;
+    });
+  }
+
   function renderAll() {
+    renderRowNumbers();
     populateFilterOptions();
     applyPtFilters();
     renderStatTiles();
