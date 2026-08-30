@@ -52,6 +52,8 @@
 
   .indicator-row { display: flex; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; }
   .indicator-row .panel { flex: 1 1 420px; margin-bottom: 0; }
+  .indicator-row .panel.compact-30 { flex: 0 1 30%; max-width: 30%; min-width: 240px; }
+  .indicator-row .panel.compact-41 { flex: 0 1 41%; max-width: 41%; min-width: 320px; }
 
   .panel {
     background: var(--surface-1);
@@ -124,6 +126,46 @@
     .filter-field select { min-width: 0; width: 100%; }
     .filter-clear { flex: 1 1 auto; }
     .filter-count { margin-left: 0; flex: 1 1 100%; }
+
+    /* Em telas de celular, os painéis de indicadores voltam ao tamanho cheio
+       (a compressão de 30%/41% só faz sentido em telas largas). */
+    .indicator-row .panel.compact-30,
+    .indicator-row .panel.compact-41 { flex: 1 1 100%; max-width: 100%; min-width: 0; }
+
+    /* "Tarefas cadastradas" vira uma lista de cards empilhados, sem precisar
+       rolar para o lado. */
+    #pt-table { min-width: 0; }
+    #pt-table thead { display: none; }
+    #pt-table, #pt-table tbody, #pt-table tr, #pt-table td { display: block; width: 100%; }
+    #pt-table tbody tr[data-key] {
+      border: 1px solid var(--gridline);
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-bottom: 10px;
+    }
+    #pt-table tbody tr[data-key] td {
+      border-bottom: none;
+      padding: 4px 0;
+      text-align: left;
+    }
+    #pt-table tbody tr[data-key] td::before {
+      display: block;
+      font-size: 10.5px;
+      text-transform: uppercase;
+      letter-spacing: .02em;
+      color: var(--text-muted);
+      font-weight: 600;
+      margin-bottom: 1px;
+    }
+    #pt-table tbody tr[data-key] td:nth-child(1)::before { content: "#"; }
+    #pt-table tbody tr[data-key] td:nth-child(2)::before { content: "Data"; }
+    #pt-table tbody tr[data-key] td:nth-child(3)::before { content: "Horário"; }
+    #pt-table tbody tr[data-key] td:nth-child(4)::before { content: "Turno"; }
+    #pt-table tbody tr[data-key] td:nth-child(5)::before { content: "TAG"; }
+    #pt-table tbody tr[data-key] td:nth-child(6)::before { content: "Atividade"; }
+    #pt-table tbody tr[data-key] td:nth-child(7)::before { content: "Duração"; }
+    #pt-table tbody tr[data-key] td:nth-child(8)::before { content: "Status"; }
+    #pt-table tbody tr[data-key] .pt-status-select { width: 100%; }
   }
 
   @media print {
@@ -154,7 +196,7 @@
   <div class="stat-row" id="stat-row"></div>
 
   <div class="indicator-row">
-    <div class="panel" style="flex: 0 1 30%; max-width: 30%; min-width: 240px;">
+    <div class="panel compact-30">
       <h2>Curva S do Projeto TGM</h2>
       <div class="panel-sub">Avanço acumulado (% das horas de tarefas) ao longo da janela. Planejado considera a data de cada tarefa; Realizado usa as tarefas já marcadas como concluídas, até hoje.</div>
       <div id="scurve-chart" class="table-scroll"></div>
@@ -162,9 +204,10 @@
         <div class="legend-item"><span class="legend-swatch" style="background:var(--series-1)"></span>Planejado</div>
         <div class="legend-item"><span class="legend-swatch" style="background:var(--series-3)"></span>Realizado</div>
       </div>
+      <div class="legend" id="scurve-status-summary" style="justify-content:center; margin-top:10px; margin-bottom:0; padding-top:10px; border-top:1px solid var(--gridline);"></div>
     </div>
 
-    <div class="panel" style="flex: 0 1 41%; max-width: 41%; min-width: 320px;">
+    <div class="panel compact-41">
       <h2>Distribuição por status — TGM</h2>
       <div class="panel-sub">Situação atual de todas as tarefas. "Atrasada" é calculada automaticamente: tarefa não concluída/em andamento cuja data já passou.</div>
       <div class="status-overview">
@@ -478,6 +521,13 @@
     document.getElementById('status-overview-table').innerHTML = order.map(function(o) {
       return '<tr><td>' + o.label + '</td><td class="num">' + counts[o.key] + '</td></tr>';
     }).join('');
+
+    var scurveSummary = document.getElementById('scurve-status-summary');
+    if (scurveSummary) {
+      scurveSummary.innerHTML = order.map(function(o) {
+        return '<div class="legend-item"><span class="legend-swatch" style="background:' + o.color + '"></span><strong>' + counts[o.key] + '</strong>&nbsp;' + o.label + '</div>';
+      }).join('');
+    }
 
     var container = document.getElementById('status-overview-chart');
     var W = container.clientWidth > 40 ? container.clientWidth : 420;
