@@ -29,7 +29,7 @@ Para adicionar uma tarefa nova, edite o `index.html` e acrescente uma `<tr>` den
 </tr>
 ```
 
-- `data-setor` = turno (1º/2º/3º Turno) — alimenta o gráfico "Tarefas por turno e status"
+- `data-setor` = turno (1º/2º/3º Turno)
 - `data-resp` = TAG do equipamento
 - `data-os` = identificador único da atividade (TAG + número)
 - `data-key` = chave única da linha (usada como `task_key` na tabela `tgm_task_status` do Supabase)
@@ -37,6 +37,10 @@ Para adicionar uma tarefa nova, edite o `index.html` e acrescente uma `<tr>` den
 A numeração (coluna `#`) é gerada automaticamente pelo JS a partir da ordem das linhas — não precisa adicionar manualmente.
 
 Os painéis de indicadores (stat tiles, gráficos, cards, filtros) recalculam tudo automaticamente a partir das linhas da tabela — não é preciso editar mais nada em outro lugar do arquivo.
+
+## Instalar como aplicativo (PWA)
+
+O site é um PWA instalável: `manifest.json` + `sw.js` (service worker, cacheia o essencial para abrir mesmo offline) + `icon-192.png`/`icon-512.png` (gerados a partir do `favicon.svg`). No Chrome/Android, um botão "Instalar aplicativo" aparece no topo da página quando o navegador considera o site instalável (evento `beforeinstallprompt`); clicar nele abre o prompt nativo do Android para adicionar à tela inicial. No iOS/Safari não existe esse prompt automático — a pessoa precisa usar Compartilhar → Adicionar à Tela de Início manualmente (os metadados `apple-touch-icon`/`apple-mobile-web-app-*` no `<head>` cuidam do ícone e do modo tela cheia nesse caso).
 
 ## Site
 
