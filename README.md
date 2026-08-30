@@ -7,12 +7,10 @@ Estrutura de indicadores clonada do painel da Parada Elétrica (`hayralde/rrp`),
 ## Funcionalidades
 
 - Estatísticas gerais (tarefas, horas alocadas, concluídas, em andamento)
-- Curva S do projeto (planejado x realizado)
-- Distribuição por status (pendente / em andamento / concluída / atrasada)
-- Tarefas por turno e status
-- Atividades por TAG de equipamento
-- Lista de atividades com % concluído
-- Tabela completa de tarefas, com filtros e marcação de status (persistida no navegador via `localStorage`)
+- Curva S do Projeto TGM (planejado x realizado)
+- Distribuição por status — TGM (pendente / em andamento / concluída / atrasada)
+- Tarefas por turno e status — TGM
+- Tabela completa de tarefas, numerada, com filtros e marcação de status (persistida no navegador via `localStorage`)
 
 ## Como adicionar tarefas novas
 
@@ -27,9 +25,11 @@ Não há backend — os dados vivem direto no `index.html`. Para adicionar uma t
 ```
 
 - `data-setor` = turno (1º/2º/3º Turno) — alimenta o gráfico "Tarefas por turno e status"
-- `data-resp` = TAG do equipamento — alimenta o painel "Atividades por TAG"
-- `data-os` = identificador único da atividade (TAG + número) — alimenta a "Lista de atividades"
+- `data-resp` = TAG do equipamento
+- `data-os` = identificador único da atividade (TAG + número)
 - `data-key` = chave única da linha (usada para guardar o status marcado no navegador)
+
+A numeração (coluna `#`) é gerada automaticamente pelo JS a partir da ordem das linhas — não precisa adicionar manualmente.
 
 Os painéis de indicadores (stat tiles, gráficos, cards, filtros) recalculam tudo automaticamente a partir das linhas da tabela — não é preciso editar mais nada em outro lugar do arquivo.
 

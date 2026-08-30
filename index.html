@@ -106,24 +106,6 @@
   .status-table tr:last-child td { border-bottom: none; }
   .status-chart-wrap { flex: 1 1 260px; min-width: 280px; }
 
-  .os-card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; align-items: start; }
-  .os-card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; }
-  .os-card .os-resp { font-size: 15px; font-weight: 700; margin-bottom: 2px; }
-  .os-card .os-count { font-size: 11.5px; color: var(--text-muted); margin-bottom: 8px; }
-  .os-card .os-item { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 5px 0; border-bottom: 1px solid var(--gridline); }
-  .os-card .os-item:last-child { border-bottom: none; }
-  .os-card .os-item-num { font-size: 12.5px; color: var(--text-secondary); }
-  .os-card .os-status { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 10.5px; font-weight: 700; color: #fff; white-space: nowrap; }
-
-  .activity-row { display: flex; justify-content: space-between; align-items: center; gap: 14px; padding: 7px 0; border-bottom: 1px solid var(--gridline); }
-  .activity-row:last-child { border-bottom: none; }
-  .activity-name { font-size: 13px; flex: 1 1 auto; min-width: 0; }
-  .activity-count { color: var(--text-muted); font-size: 11.5px; }
-  .activity-pct-wrap { display: flex; align-items: center; gap: 8px; flex: 0 0 150px; }
-  .activity-bar-track { background: var(--gridline); border-radius: 4px; height: 12px; overflow: hidden; flex: 1; }
-  .activity-bar { height: 100%; border-radius: 4px; min-width: 3px; }
-  .activity-pct { font-size: 12.5px; font-variant-numeric: tabular-nums; color: var(--text-secondary); width: 36px; text-align: right; }
-
   .empty-msg { font-size: 13.5px; color: var(--text-muted); padding: 18px 0; text-align: center; }
 
   footer { font-size: 12.5px; color: var(--text-muted); margin-top: 20px; }
@@ -174,7 +156,7 @@
 
   <div class="indicator-row">
     <div class="panel">
-      <h2>Curva S do Projeto</h2>
+      <h2>Curva S do Projeto TGM</h2>
       <div class="panel-sub">Avanço acumulado (% das horas de tarefas) ao longo da janela. Planejado considera a data de cada tarefa; Realizado usa as tarefas já marcadas como concluídas, até hoje.</div>
       <div id="scurve-chart" class="table-scroll"></div>
       <div class="legend" style="justify-content:center; margin-bottom:0;">
@@ -184,7 +166,7 @@
     </div>
 
     <div class="panel">
-      <h2>Distribuição por status</h2>
+      <h2>Distribuição por status — TGM</h2>
       <div class="panel-sub">Situação atual de todas as tarefas. "Atrasada" é calculada automaticamente: tarefa não concluída/em andamento cuja data já passou.</div>
       <div class="status-overview">
         <table class="status-table">
@@ -197,7 +179,7 @@
   </div>
 
   <div class="panel half-width-panel">
-    <h2>Tarefas por turno e status</h2>
+    <h2>Tarefas por turno e status — TGM</h2>
     <div class="panel-sub">Quantas tarefas de cada turno estão concluídas, em andamento ou paradas (ainda não iniciadas). Passe o mouse sobre uma barra para ver o detalhe.</div>
     <div id="setor-status-chart" class="table-scroll"></div>
     <div class="legend legend-lg" style="justify-content:flex-end; margin-bottom:0;">
@@ -205,31 +187,6 @@
       <div class="legend-item"><span class="legend-swatch" style="background:var(--warn-border)"></span>Em andamento</div>
       <div class="legend-item"><span class="legend-swatch" style="background:var(--series-1)"></span>Parada</div>
     </div>
-  </div>
-
-  <div class="panel">
-    <h2>Atividades por TAG</h2>
-    <div class="panel-sub">Um card por TAG de equipamento, com o número de cada atividade sob aquele TAG e o status atual.</div>
-    <div class="filter-bar">
-      <div class="filter-field">
-        <label for="os-card-status">Status</label>
-        <select id="os-card-status" onchange="renderOsCards()">
-          <option value="">Todas</option>
-          <option value="pendente">Pendentes</option>
-          <option value="andamento">Em Andamento</option>
-          <option value="concluida">Concluídas</option>
-          <option value="atrasada">Atrasadas</option>
-        </select>
-      </div>
-      <div class="filter-count" id="os-card-count"></div>
-    </div>
-    <div class="os-card-grid" id="os-cards"></div>
-  </div>
-
-  <div class="panel">
-    <h2>Lista de atividades</h2>
-    <div class="panel-sub">Relação de todas as atividades por TAG/subatividade, com o percentual concluído de cada uma.</div>
-    <div id="activity-list"></div>
   </div>
 
   <div class="panel">
@@ -655,101 +612,6 @@
     container.innerHTML = svg;
   }
 
-  function renderOsCards() {
-    var rows = ptRows();
-    var container = document.getElementById('os-cards');
-    if (!rows.length) { container.innerHTML = '<div class="empty-msg">Nenhuma tarefa cadastrada ainda.</div>'; document.getElementById('os-card-count').textContent = '0 OS'; return; }
-
-    var statusInfo = {
-      pendente: { label: 'Pendente', color: 'var(--series-1)' },
-      andamento: { label: 'Em Andamento', color: 'var(--warn-border)' },
-      concluida: { label: 'Concluída', color: 'var(--series-3)' },
-      atrasada: { label: 'Atrasada', color: 'var(--status-critical)' }
-    };
-    var filterVal = document.getElementById('os-card-status').value;
-
-    var byResp = {};
-    var total = rows.length;
-    var visibleItems = 0;
-    rows.forEach(function(row) {
-      var statusKey = rowStatusKey(row);
-      var resp = row.getAttribute('data-resp');
-      var os = row.getAttribute('data-os');
-      if (!byResp[resp]) byResp[resp] = [];
-      byResp[resp].push({ os: os, statusKey: statusKey });
-    });
-
-    var resps = Object.keys(byResp).sort();
-
-    var html = resps.map(function(resp) {
-      var items = byResp[resp];
-      var visible = filterVal ? items.filter(function(it) { return it.statusKey === filterVal; }) : items;
-      if (filterVal && !visible.length) return '';
-      visibleItems += visible.length;
-      var itemsHtml = visible.map(function(it) {
-        var s = statusInfo[it.statusKey];
-        return '<div class="os-item">' +
-          '<span class="os-item-num">OS ' + it.os + '</span>' +
-          '<span class="os-status" style="background:' + s.color + ';">' + s.label + '</span>' +
-          '</div>';
-      }).join('');
-      return '<div class="os-card">' +
-        '<div class="os-resp">' + resp + '</div>' +
-        '<div class="os-count">' + items.length + ' tarefa' + (items.length === 1 ? '' : 's') + '</div>' +
-        itemsHtml +
-        '</div>';
-    }).join('');
-
-    container.innerHTML = html;
-
-    var countEl = document.getElementById('os-card-count');
-    countEl.textContent = (!filterVal || visibleItems === total) ? (total + ' OS') : (visibleItems + ' de ' + total + ' OS');
-  }
-
-  function renderActivityList() {
-    var rows = ptRows();
-    var container = document.getElementById('activity-list');
-    if (!rows.length) { container.innerHTML = '<div class="empty-msg">Nenhuma tarefa cadastrada ainda.</div>'; return; }
-
-    var groups = {};
-    var order = [];
-    rows.forEach(function(row) {
-      var done = row.classList.contains('pt-done');
-      var os = row.getAttribute('data-os');
-      var setor = row.getAttribute('data-setor');
-      var descEl = row.querySelector('.pt-activity');
-      var desc = descEl ? descEl.textContent.trim() : '';
-      if (!groups[os]) { groups[os] = { total: 0, done: 0, descs: [], setor: setor }; order.push(os); }
-      groups[os].total++;
-      if (done) groups[os].done++;
-      if (groups[os].descs.indexOf(desc) === -1) groups[os].descs.push(desc);
-    });
-
-    order.sort(function(a, b) {
-      var na = parseInt(a, 10), nb = parseInt(b, 10);
-      if (isNaN(na) && isNaN(nb)) return a.localeCompare(b, 'pt-BR');
-      if (isNaN(na)) return 1;
-      if (isNaN(nb)) return -1;
-      return na - nb;
-    });
-
-    var html = order.map(function(os) {
-      var g = groups[os];
-      var pct = Math.round(g.done / g.total * 100);
-      var barColor = pct === 100 ? 'var(--series-3)' : (pct > 0 ? 'var(--warn-border)' : 'var(--series-1)');
-      var desc = g.descs.join('; ');
-      return '<div class="activity-row">' +
-        '<div class="activity-name"><strong>OS ' + os + '</strong> [' + g.setor + '] — ' + desc + (g.total > 1 ? ' <span class="activity-count">(' + g.done + '/' + g.total + ')</span>' : '') + '</div>' +
-        '<div class="activity-pct-wrap">' +
-          '<div class="activity-bar-track"><div class="activity-bar" style="width:' + pct + '%; background:' + barColor + ';"></div></div>' +
-          '<span class="activity-pct">' + pct + '%</span>' +
-        '</div>' +
-        '</div>';
-    }).join('');
-
-    container.innerHTML = html;
-  }
-
   function renderSetorStatusChart() {
     var rows = ptRows();
     var container = document.getElementById('setor-status-chart');
@@ -897,8 +759,6 @@
     renderSetorStatusChart();
     renderStatusOverview();
     renderSCurve();
-    renderOsCards();
-    renderActivityList();
   }
 
   restoreStatusState();
