@@ -386,7 +386,9 @@
 </div>
 
 <script>
-  var STATUS_STORAGE_KEY = 'tgm-pt-status-v1';
+  var SUPABASE_URL = 'https://rsqbbcsaqmxfriwwbamv.supabase.co';
+  var SUPABASE_KEY = 'sb_publishable_yCxFBZus6N2UHxY2W8Xdmw_Jo7SCFIx';
+  var STATUS_TABLE_URL = SUPABASE_URL + '/rest/v1/tgm_task_status';
 
   function todayIso() {
     var now = new Date();
@@ -401,13 +403,27 @@
     return Array.prototype.slice.call(document.querySelectorAll('#pt-tbody tr[data-key]'));
   }
 
-  function loadStatusState() {
-    try { return JSON.parse(localStorage.getItem(STATUS_STORAGE_KEY)) || {}; }
-    catch (e) { return {}; }
+  function supabaseHeaders(extra) {
+    var h = { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json' };
+    if (extra) for (var k in extra) h[k] = extra[k];
+    return h;
   }
-  function saveStatusState(state) {
-    try { localStorage.setItem(STATUS_STORAGE_KEY, JSON.stringify(state)); }
-    catch (e) {}
+  function fetchRemoteStatusState() {
+    return fetch(STATUS_TABLE_URL + '?select=task_key,status', { headers: supabaseHeaders() })
+      .then(function(r) { return r.ok ? r.json() : []; })
+      .then(function(rows) {
+        var state = {};
+        rows.forEach(function(r) { if (r.status) state[r.task_key] = r.status; });
+        return state;
+      })
+      .catch(function() { return null; });
+  }
+  function pushRemoteStatus(key, status) {
+    return fetch(STATUS_TABLE_URL, {
+      method: 'POST',
+      headers: supabaseHeaders({ 'Prefer': 'resolution=merge-duplicates,return=minimal' }),
+      body: JSON.stringify([{ task_key: key, status: status || '', updated_at: new Date().toISOString() }])
+    }).catch(function() {});
   }
   function applyStatusVisual(row, status) {
     row.classList.toggle('pt-done', status === 'concluida');
@@ -418,17 +434,25 @@
   function setStatus(select) {
     var row = select.closest('tr');
     var key = row.getAttribute('data-key');
-    var state = loadStatusState();
-    if (select.value) { state[key] = select.value; } else { delete state[key]; }
-    saveStatusState(state);
     applyStatusVisual(row, select.value);
     renderAll();
+    pushRemoteStatus(key, select.value);
   }
-  function restoreStatusState() {
-    var state = loadStatusState();
+  function applyRemoteState(state) {
     ptRows().forEach(function(row) {
       var key = row.getAttribute('data-key');
-      if (state[key]) applyStatusVisual(row, state[key]);
+      applyStatusVisual(row, state[key] || '');
+    });
+  }
+  var lastRemoteHash = null;
+  function refreshFromRemote() {
+    return fetchRemoteStatusState().then(function(state) {
+      if (state === null) return;
+      var hash = JSON.stringify(state);
+      if (hash === lastRemoteHash) return;
+      lastRemoteHash = hash;
+      applyRemoteState(state);
+      renderAll();
     });
   }
 
@@ -761,8 +785,9 @@
     renderSCurve();
   }
 
-  restoreStatusState();
   renderAll();
+  refreshFromRemote();
+  setInterval(refreshFromRemote, 5000);
 
   var resizeTimer;
   window.addEventListener('resize', function() {

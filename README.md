@@ -10,11 +10,15 @@ Estrutura de indicadores clonada do painel da Parada Elétrica (`hayralde/rrp`),
 - Curva S do Projeto TGM (planejado x realizado)
 - Distribuição por status — TGM (pendente / em andamento / concluída / atrasada)
 - Tarefas por turno e status — TGM
-- Tabela completa de tarefas, numerada, com filtros e marcação de status (persistida no navegador via `localStorage`)
+- Tabela completa de tarefas, numerada, com filtros e marcação de status — o status é salvo no Supabase e fica visível para qualquer pessoa que acessar o site (atualiza sozinho a cada 5s, sem precisar recarregar a página)
+
+## Backend (status compartilhado)
+
+As tarefas em si (data, turno, TAG, atividade, duração) vivem direto no `index.html` — sem backend. Só o **status** de cada tarefa (Pendente/Em Andamento/Concluída) é compartilhado entre todos os visitantes, salvo na tabela `tgm_task_status` do projeto Supabase `hayralde's Project` (`rsqbbcsaqmxfriwwbamv`). Qualquer visitante pode alterar o status — não há login. A página consulta essa tabela a cada 5s para refletir o que outros visitantes marcaram.
 
 ## Como adicionar tarefas novas
 
-Não há backend — os dados vivem direto no `index.html`. Para adicionar uma tarefa nova, edite o arquivo e acrescente uma `<tr>` dentro de `<tbody id="pt-tbody">`, seguindo o padrão das demais linhas:
+Para adicionar uma tarefa nova, edite o `index.html` e acrescente uma `<tr>` dentro de `<tbody id="pt-tbody">`, seguindo o padrão das demais linhas:
 
 ```html
 <tr data-date="2026-09-08" data-setor="1º Turno" data-resp="BTE-40" data-os="BTE-40-39" data-hours="4" data-key="tgm-39">
@@ -27,7 +31,7 @@ Não há backend — os dados vivem direto no `index.html`. Para adicionar uma t
 - `data-setor` = turno (1º/2º/3º Turno) — alimenta o gráfico "Tarefas por turno e status"
 - `data-resp` = TAG do equipamento
 - `data-os` = identificador único da atividade (TAG + número)
-- `data-key` = chave única da linha (usada para guardar o status marcado no navegador)
+- `data-key` = chave única da linha (usada como `task_key` na tabela `tgm_task_status` do Supabase)
 
 A numeração (coluna `#`) é gerada automaticamente pelo JS a partir da ordem das linhas — não precisa adicionar manualmente.
 
