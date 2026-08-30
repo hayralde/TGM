@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TGM — Indicadores</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
 <style>
   .viz-root {
     color-scheme: light;
@@ -61,8 +62,6 @@
   }
   .panel h2 { font-size: 16.5px; margin: 0 0 4px; }
   .panel .panel-sub { font-size: 13.5px; color: var(--text-secondary); margin-bottom: 16px; }
-  .panel.half-width-panel { max-width: max(calc(50% - 8px), 340px); }
-
   .legend { display: flex; gap: 16px; margin-bottom: 14px; flex-wrap: wrap; }
   .legend-item { display: flex; align-items: center; gap: 6px; font-size: 13.5px; color: var(--text-secondary); }
   .legend-swatch { width: 10px; height: 10px; border-radius: 3px; }
@@ -97,7 +96,7 @@
   tr.pt-andamento { background: color-mix(in oklab, var(--warn-border) 10%, transparent); }
   tr.pt-andamento .pt-status-select { border-color: var(--warn-border); }
 
-  #setor-status-chart svg text, #status-overview-chart svg text { font-family: inherit; }
+  #status-overview-chart svg text { font-family: inherit; }
 
   .status-overview { display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap; }
   .status-table { border-collapse: collapse; font-size: 13.5px; width: auto; min-width: 230px; max-width: 310px; }
@@ -175,17 +174,6 @@
         </table>
         <div class="status-chart-wrap"><div id="status-overview-chart" class="table-scroll"></div></div>
       </div>
-    </div>
-  </div>
-
-  <div class="panel half-width-panel">
-    <h2>Tarefas por turno e status — TGM</h2>
-    <div class="panel-sub">Quantas tarefas de cada turno estão concluídas, em andamento ou paradas (ainda não iniciadas). Passe o mouse sobre uma barra para ver o detalhe.</div>
-    <div id="setor-status-chart" class="table-scroll"></div>
-    <div class="legend legend-lg" style="justify-content:flex-end; margin-bottom:0;">
-      <div class="legend-item"><span class="legend-swatch" style="background:var(--series-3)"></span>Concluída</div>
-      <div class="legend-item"><span class="legend-swatch" style="background:var(--warn-border)"></span>Em andamento</div>
-      <div class="legend-item"><span class="legend-swatch" style="background:var(--series-1)"></span>Parada</div>
     </div>
   </div>
 
@@ -636,88 +624,6 @@
     container.innerHTML = svg;
   }
 
-  function renderSetorStatusChart() {
-    var rows = ptRows();
-    var container = document.getElementById('setor-status-chart');
-    var bySetor = {};
-    rows.forEach(function(row) {
-      var setor = row.getAttribute('data-setor');
-      var status = rowStatusKey(row) === 'atrasada' ? 'pendente' : rowStatusKey(row);
-      if (!bySetor[setor]) bySetor[setor] = { concluida: 0, andamento: 0, pendente: 0 };
-      bySetor[setor][status]++;
-    });
-    var setores = Object.keys(bySetor).sort(function(a, b) {
-      var totalA = bySetor[a].concluida + bySetor[a].andamento + bySetor[a].pendente;
-      var totalB = bySetor[b].concluida + bySetor[b].andamento + bySetor[b].pendente;
-      return totalB - totalA;
-    });
-
-    if (!setores.length) { container.innerHTML = '<div class="empty-msg">Nenhuma tarefa cadastrada ainda.</div>'; return; }
-
-    var W = container.clientWidth > 40 ? container.clientWidth : 900;
-    var narrow = W < 500;
-    var marginLeft = narrow ? 88 : 130, marginRight = 34, marginTop = 10, marginBottom = 28;
-    var rowH = 52;
-    var n = setores.length || 1;
-    var H = marginTop + n * rowH + marginBottom;
-    var plotW = W - marginLeft - marginRight;
-
-    var maxVal = 0;
-    setores.forEach(function(s) {
-      var c = bySetor[s];
-      maxVal = Math.max(maxVal, c.concluida, c.andamento, c.pendente);
-    });
-    var step = maxVal <= 10 ? 2 : (maxVal <= 20 ? 4 : (maxVal <= 40 ? 5 : 10));
-    var xMax = Math.max(step, Math.ceil((maxVal || 1) / step) * step);
-    var labelFontSize = narrow ? 11 : 12.5;
-
-    function x(v) { return marginLeft + (v / xMax) * plotW; }
-
-    var plotBottom = marginTop + n * rowH;
-    var bandSvg = '';
-    setores.forEach(function(setor, idx) {
-      if (idx % 2 === 1) {
-        bandSvg += '<rect x="0" y="' + (marginTop + idx * rowH) + '" width="' + W + '" height="' + rowH + '" fill="color-mix(in oklab, var(--gridline) 45%, transparent)"/>';
-      }
-    });
-    var gridSvg = '';
-    var numTicks = xMax / step;
-    for (var i = 0; i <= numTicks; i++) {
-      var v = i * step;
-      var xx = x(v);
-      gridSvg += '<line x1="' + xx + '" y1="' + marginTop + '" x2="' + xx + '" y2="' + plotBottom + '" stroke="var(--gridline)" stroke-width="1" stroke-dasharray="3,3"/>';
-      gridSvg += '<text x="' + xx + '" y="' + (plotBottom + 18) + '" text-anchor="middle" font-size="' + labelFontSize + '" fill="var(--text-muted)">' + v + '</text>';
-    }
-    gridSvg += '<line x1="' + marginLeft + '" y1="' + marginTop + '" x2="' + marginLeft + '" y2="' + plotBottom + '" stroke="var(--baseline)" stroke-width="1.5"/>';
-
-    var barH = 13, barGap = 2;
-    var barsSvg = '', labelsSvg = '';
-    setores.forEach(function(setor, idx) {
-      var c = bySetor[setor];
-      var rowY = marginTop + idx * rowH;
-      var groupY = rowY + (rowH - (barH * 3 + barGap * 2)) / 2;
-      var items = [
-        { v: c.concluida, color: 'var(--series-3)', label: 'concluída' },
-        { v: c.andamento, color: 'var(--warn-border)', label: 'em andamento' },
-        { v: c.pendente, color: 'var(--series-1)', label: 'parada' }
-      ];
-      items.forEach(function(item, bIdx) {
-        var by = groupY + bIdx * (barH + barGap);
-        var bx = x(item.v);
-        var bw = bx - marginLeft;
-        if (item.v > 0) {
-          barsSvg += '<rect x="' + marginLeft + '" y="' + by + '" width="' + bw + '" height="' + barH + '" fill="' + item.color + '"><title>' + setor + ' — ' + item.label + ': ' + item.v + '</title></rect>';
-          labelsSvg += '<text x="' + (bx + 4) + '" y="' + (by + barH - 2.5) + '" font-size="' + (narrow ? 9.5 : 10.5) + '" fill="var(--text-secondary)" text-anchor="start">' + item.v + '</text>';
-        }
-      });
-      var labelY = rowY + rowH / 2;
-      labelsSvg += '<text x="' + (marginLeft - 8) + '" y="' + (labelY + 4) + '" font-size="' + labelFontSize + '" fill="var(--text-secondary)" text-anchor="end">' + setor + '</text>';
-    });
-
-    var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%; height:auto; display:block;">' + bandSvg + gridSvg + barsSvg + labelsSvg + '</svg>';
-    container.innerHTML = svg;
-  }
-
   function populateFilterOptions() {
     var rows = ptRows();
     var setores = Array.from(new Set(rows.map(function(r) { return r.getAttribute('data-setor'); }))).sort(function(a, b) { return a.localeCompare(b, 'pt-BR'); });
@@ -780,7 +686,6 @@
     populateFilterOptions();
     applyPtFilters();
     renderStatTiles();
-    renderSetorStatusChart();
     renderStatusOverview();
     renderSCurve();
   }
@@ -793,7 +698,6 @@
   window.addEventListener('resize', function() {
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(function() {
-      renderSetorStatusChart();
       renderStatusOverview();
       renderSCurve();
     }, 150);

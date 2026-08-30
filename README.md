@@ -9,7 +9,6 @@ Estrutura de indicadores clonada do painel da Parada Elétrica (`hayralde/rrp`),
 - Estatísticas gerais (tarefas, horas alocadas, concluídas, em andamento)
 - Curva S do Projeto TGM (planejado x realizado)
 - Distribuição por status — TGM (pendente / em andamento / concluída / atrasada)
-- Tarefas por turno e status — TGM
 - Tabela completa de tarefas, numerada, com filtros e marcação de status — o status é salvo no Supabase e fica visível para qualquer pessoa que acessar o site (atualiza sozinho a cada 5s, sem precisar recarregar a página)
 
 ## Backend (status compartilhado)
