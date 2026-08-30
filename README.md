@@ -35,4 +35,4 @@ Os painéis de indicadores (stat tiles, gráficos, cards, filtros) recalculam tu
 
 ## Site
 
-**https://hayralde.github.io/rrp1/**
+**https://hayralde.github.io/TGM/**
