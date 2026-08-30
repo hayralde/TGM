@@ -138,24 +138,36 @@
     #pt-table thead { display: none; }
     #pt-table, #pt-table tbody, #pt-table tr, #pt-table td { display: block; width: 100%; }
     #pt-table tbody tr[data-key] {
+      display: flex;
+      flex-wrap: wrap;
       border: 1px solid var(--gridline);
       border-radius: 8px;
-      padding: 10px 12px;
-      margin-bottom: 10px;
+      padding: 8px 10px;
+      margin-bottom: 8px;
     }
     #pt-table tbody tr[data-key] td {
+      display: block;
       border-bottom: none;
-      padding: 4px 0;
+      padding: 3px 6px 3px 0;
       text-align: left;
+      box-sizing: border-box;
     }
+    /* campos curtos agrupados 3 por linha; Atividade e Status ocupam a linha toda */
+    #pt-table tbody tr[data-key] td:nth-child(1) { flex: 0 0 33.33%; order: 1; } /* # */
+    #pt-table tbody tr[data-key] td:nth-child(2) { flex: 0 0 33.33%; order: 2; } /* Data */
+    #pt-table tbody tr[data-key] td:nth-child(3) { flex: 0 0 33.33%; order: 3; } /* Horário */
+    #pt-table tbody tr[data-key] td:nth-child(4) { flex: 0 0 33.33%; order: 4; } /* Turno */
+    #pt-table tbody tr[data-key] td:nth-child(5) { flex: 0 0 33.33%; order: 5; } /* TAG */
+    #pt-table tbody tr[data-key] td:nth-child(7) { flex: 0 0 33.33%; order: 6; } /* Duração */
+    #pt-table tbody tr[data-key] td:nth-child(6) { flex: 0 0 100%; order: 7; padding-right: 0; margin-top: 4px; } /* Atividade */
+    #pt-table tbody tr[data-key] td:nth-child(8) { flex: 0 0 100%; order: 8; padding-right: 0; margin-top: 4px; } /* Status */
     #pt-table tbody tr[data-key] td::before {
       display: block;
-      font-size: 10.5px;
+      font-size: 10px;
       text-transform: uppercase;
       letter-spacing: .02em;
       color: var(--text-muted);
       font-weight: 600;
-      margin-bottom: 1px;
     }
     #pt-table tbody tr[data-key] td:nth-child(1)::before { content: "#"; }
     #pt-table tbody tr[data-key] td:nth-child(2)::before { content: "Data"; }
