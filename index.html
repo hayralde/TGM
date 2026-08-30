@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TGM — Indicadores</title>
+<style>
+  .viz-root {
+    color-scheme: light;
+    --surface-1:      #fcfcfb;
+    --page-plane:     #f9f9f7;
+    --text-primary:   #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted:     #898781;
+    --gridline:       #e1e0d9;
+    --baseline:       #c3c2b7;
+    --border:         rgba(11,11,11,0.10);
+    --series-1:       #2a78d6;
+    --series-2:       #eb6834;
+    --series-3:       #1baf7a;
+    --series-4:       #eda100;
+    --series-5:       #e87ba4;
+    --warn-bg:        #fff7e8;
+    --warn-border:    #eda100;
+    --status-critical: #d6455a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--page-plane);
+    color: var(--text-primary);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1440px; margin: 0 auto; padding: 28px 24px 64px; }
+  header.top { margin-bottom: 20px; }
+  header.top h1 { font-size: 24px; margin: 0 0 4px; }
+  header.top .sub { color: var(--text-secondary); font-size: 14.5px; }
+
+  .stat-row { display: flex; gap: 12px; margin: 18px 0 20px; flex-wrap: wrap; }
+  .stat-tile {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 16px;
+    min-width: 150px;
+    flex: 1 1 150px;
+  }
+  .stat-tile .val { font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .stat-tile .lbl { font-size: 13px; color: var(--text-secondary); margin-top: 2px; }
+
+  .indicator-row { display: flex; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; }
+  .indicator-row .panel { flex: 1 1 420px; margin-bottom: 0; }
+
+  .panel {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 20px;
+    margin-bottom: 24px;
+  }
+  .panel h2 { font-size: 16.5px; margin: 0 0 4px; }
+  .panel .panel-sub { font-size: 13.5px; color: var(--text-secondary); margin-bottom: 16px; }
+  .panel.half-width-panel { max-width: max(calc(50% - 8px), 340px); }
+
+  .legend { display: flex; gap: 16px; margin-bottom: 14px; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 13.5px; color: var(--text-secondary); }
+  .legend-swatch { width: 10px; height: 10px; border-radius: 3px; }
+  .legend-lg .legend-item { font-size: 15.5px; font-weight: 600; }
+  .legend-lg .legend-swatch { width: 13px; height: 13px; }
+
+  .filter-bar { display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap; margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid var(--gridline); }
+  .filter-field { display: flex; flex-direction: column; gap: 4px; }
+  .filter-field label { font-size: 11.5px; text-transform: uppercase; letter-spacing: .02em; color: var(--text-muted); font-weight: 600; }
+  .filter-field select {
+    font-family: inherit; font-size: 13.5px; color: var(--text-primary);
+    background: var(--surface-1); border: 1px solid var(--border); border-radius: 6px;
+    padding: 6px 10px; min-width: 150px;
+  }
+  .filter-clear {
+    font-family: inherit; font-size: 13px; color: var(--text-secondary); background: none;
+    border: 1px solid var(--border); border-radius: 6px; padding: 6px 12px; cursor: pointer;
+  }
+  .filter-clear:hover { background: var(--gridline); }
+  .filter-count { font-size: 13px; color: var(--text-muted); margin-left: auto; align-self: center; }
+
+  .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table { width: 100%; min-width: 560px; border-collapse: collapse; font-size: 13.5px; }
+  th { text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: .02em; color: var(--text-muted); font-weight: 600; padding: 6px 8px; border-bottom: 1px solid var(--baseline); }
+  td { padding: 7px 8px; border-bottom: 1px solid var(--gridline); color: var(--text-primary); }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; color: var(--text-secondary); }
+
+  .pt-status-cell { text-align: center; }
+  .pt-status-select { font-size: 12.5px; padding: 3px 6px; border-radius: 6px; border: 1px solid var(--gridline); background: var(--surface-1); color: var(--text-primary); cursor: pointer; }
+  tr.pt-done td:not(.pt-status-cell) { opacity: 0.5; text-decoration: line-through; text-decoration-color: var(--text-muted); }
+  tr.pt-done { background: color-mix(in oklab, var(--series-3) 6%, transparent); }
+  tr.pt-andamento { background: color-mix(in oklab, var(--warn-border) 10%, transparent); }
+  tr.pt-andamento .pt-status-select { border-color: var(--warn-border); }
+
+  #setor-status-chart svg text, #status-overview-chart svg text { font-family: inherit; }
+
+  .status-overview { display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap; }
+  .status-table { border-collapse: collapse; font-size: 13.5px; width: auto; min-width: 230px; max-width: 310px; }
+  .status-table th { background: var(--series-1); color: #fff; text-align: left; padding: 6px 10px; font-size: 12px; text-transform: uppercase; letter-spacing: .02em; }
+  .status-table td { padding: 6px 10px; border-bottom: 1px solid var(--gridline); }
+  .status-table tr:last-child td { border-bottom: none; }
+  .status-chart-wrap { flex: 1 1 260px; min-width: 280px; }
+
+  .os-card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; align-items: start; }
+  .os-card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; }
+  .os-card .os-resp { font-size: 15px; font-weight: 700; margin-bottom: 2px; }
+  .os-card .os-count { font-size: 11.5px; color: var(--text-muted); margin-bottom: 8px; }
+  .os-card .os-item { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 5px 0; border-bottom: 1px solid var(--gridline); }
+  .os-card .os-item:last-child { border-bottom: none; }
+  .os-card .os-item-num { font-size: 12.5px; color: var(--text-secondary); }
+  .os-card .os-status { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 10.5px; font-weight: 700; color: #fff; white-space: nowrap; }
+
+  .activity-row { display: flex; justify-content: space-between; align-items: center; gap: 14px; padding: 7px 0; border-bottom: 1px solid var(--gridline); }
+  .activity-row:last-child { border-bottom: none; }
+  .activity-name { font-size: 13px; flex: 1 1 auto; min-width: 0; }
+  .activity-count { color: var(--text-muted); font-size: 11.5px; }
+  .activity-pct-wrap { display: flex; align-items: center; gap: 8px; flex: 0 0 150px; }
+  .activity-bar-track { background: var(--gridline); border-radius: 4px; height: 12px; overflow: hidden; flex: 1; }
+  .activity-bar { height: 100%; border-radius: 4px; min-width: 3px; }
+  .activity-pct { font-size: 12.5px; font-variant-numeric: tabular-nums; color: var(--text-secondary); width: 36px; text-align: right; }
+
+  .empty-msg { font-size: 13.5px; color: var(--text-muted); padding: 18px 0; text-align: center; }
+
+  footer { font-size: 12.5px; color: var(--text-muted); margin-top: 20px; }
+
+  .export-bar { text-align: right; margin-bottom: 12px; }
+  .export-pdf-btn { font-family: inherit; font-size: 13px; font-weight: 600; color: #fff; background: var(--series-1); border: none; border-radius: 6px; padding: 9px 18px; cursor: pointer; }
+  .export-pdf-btn:hover { background: color-mix(in oklab, var(--series-1) 82%, black); }
+
+  @media (max-width: 640px) {
+    .wrap { padding: 16px 12px 40px; }
+    header.top h1 { font-size: 21px; }
+    .panel { padding: 14px 12px; }
+    .stat-tile { min-width: 130px; padding: 10px 12px; }
+    .stat-tile .val { font-size: 21px; }
+    .filter-bar { gap: 10px; }
+    .filter-field { flex: 1 1 100%; }
+    .filter-field select { min-width: 0; width: 100%; }
+    .filter-clear { flex: 1 1 auto; }
+    .filter-count { margin-left: 0; flex: 1 1 100%; }
+  }
+
+  @media print {
+    * { print-color-adjust: exact !important; -webkit-print-color-adjust: exact !important; color-adjust: exact !important; }
+    @page { size: A4 landscape; margin: 10mm; }
+    body { background: #fff; }
+    .export-bar, .filter-bar { display: none !important; }
+    .wrap { max-width: none; padding: 0; }
+    .panel { break-inside: avoid; }
+    .indicator-row .panel { break-inside: avoid; }
+    .table-scroll { overflow: visible !important; }
+  }
+</style>
+</head>
+<body>
+<div class="viz-root">
+<div class="wrap">
+  <div class="export-bar">
+    <button type="button" class="export-pdf-btn" onclick="exportPagePdf()">Exportar página em PDF</button>
+  </div>
+
+  <header class="top">
+    <h1>TGM — Indicadores</h1>
+    <div class="sub">Parada Programada — Agosto/Setembro 2026 · Disciplina TGM · TAG BTE-40</div>
+    <div class="sub" id="header-sub"></div>
+  </header>
+
+  <div class="stat-row" id="stat-row"></div>
+
+  <div class="indicator-row">
+    <div class="panel">
+      <h2>Curva S do Projeto</h2>
+      <div class="panel-sub">Avanço acumulado (% das horas de tarefas) ao longo da janela. Planejado considera a data de cada tarefa; Realizado usa as tarefas já marcadas como concluídas, até hoje.</div>
+      <div id="scurve-chart" class="table-scroll"></div>
+      <div class="legend" style="justify-content:center; margin-bottom:0;">
+        <div class="legend-item"><span class="legend-swatch" style="background:var(--series-1)"></span>Planejado</div>
+        <div class="legend-item"><span class="legend-swatch" style="background:var(--series-3)"></span>Realizado</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Distribuição por status</h2>
+      <div class="panel-sub">Situação atual de todas as tarefas. "Atrasada" é calculada automaticamente: tarefa não concluída/em andamento cuja data já passou.</div>
+      <div class="status-overview">
+        <table class="status-table">
+          <thead><tr><th>Status</th><th>Qtd</th></tr></thead>
+          <tbody id="status-overview-table"></tbody>
+        </table>
+        <div class="status-chart-wrap"><div id="status-overview-chart" class="table-scroll"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel half-width-panel">
+    <h2>Tarefas por turno e status</h2>
+    <div class="panel-sub">Quantas tarefas de cada turno estão concluídas, em andamento ou paradas (ainda não iniciadas). Passe o mouse sobre uma barra para ver o detalhe.</div>
+    <div id="setor-status-chart" class="table-scroll"></div>
+    <div class="legend legend-lg" style="justify-content:flex-end; margin-bottom:0;">
+      <div class="legend-item"><span class="legend-swatch" style="background:var(--series-3)"></span>Concluída</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:var(--warn-border)"></span>Em andamento</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:var(--series-1)"></span>Parada</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Atividades por TAG</h2>
+    <div class="panel-sub">Um card por TAG de equipamento, com o número de cada atividade sob aquele TAG e o status atual.</div>
+    <div class="filter-bar">
+      <div class="filter-field">
+        <label for="os-card-status">Status</label>
+        <select id="os-card-status" onchange="renderOsCards()">
+          <option value="">Todas</option>
+          <option value="pendente">Pendentes</option>
+          <option value="andamento">Em Andamento</option>
+          <option value="concluida">Concluídas</option>
+          <option value="atrasada">Atrasadas</option>
+        </select>
+      </div>
+      <div class="filter-count" id="os-card-count"></div>
+    </div>
+    <div class="os-card-grid" id="os-cards"></div>
+  </div>
+
+  <div class="panel">
+    <h2>Lista de atividades</h2>
+    <div class="panel-sub">Relação de todas as atividades por TAG/subatividade, com o percentual concluído de cada uma.</div>
+    <div id="activity-list"></div>
+  </div>
+
+  <div class="panel">
+    <h2>Tarefas cadastradas</h2>
+    <div class="panel-sub">Lista completa das tarefas. Para adicionar uma tarefa nova, edite este arquivo e acrescente uma linha em <code>&lt;tbody id="pt-tbody"&gt;</code> seguindo o padrão das demais (atributos <code>data-date</code>, <code>data-setor</code> = turno, <code>data-resp</code> = TAG, <code>data-os</code>, <code>data-hours</code>, <code>data-key</code>).</div>
+    <div class="filter-bar">
+      <div class="filter-field">
+        <label for="f-status">Status</label>
+        <select id="f-status" onchange="applyPtFilters()">
+          <option value="">Todas</option>
+          <option value="pendente">Pendentes</option>
+          <option value="andamento">Em Andamento</option>
+          <option value="concluida">Concluídas</option>
+          <option value="atrasada">Atrasadas</option>
+        </select>
+      </div>
+      <div class="filter-field">
+        <label for="f-setor">Turno</label>
+        <select id="f-setor" onchange="applyPtFilters()">
+          <option value="">Todos</option>
+        </select>
+      </div>
+      <div class="filter-field">
+        <label for="f-resp">TAG</label>
+        <select id="f-resp" onchange="applyPtFilters()">
+          <option value="">Todos</option>
+        </select>
+      </div>
+      <button type="button" class="filter-clear" onclick="clearPtFilters()">Limpar filtros</button>
+      <div class="filter-count" id="f-count"></div>
+    </div>
+    <div class="table-scroll">
+    <table id="pt-table">
+      <thead>
+        <tr><th>Data</th><th>Horário</th><th>Turno</th><th>TAG</th><th>Atividade</th><th>Duração</th><th>Status</th></tr>
+      </thead>
+      <tbody id="pt-tbody">
+        <tr data-date="2026-08-27" data-setor="1º Turno" data-resp="BTE-40" data-os="BTE-40-01" data-hours="4" data-key="tgm-1">
+          <td>27/08</td><td>07:00–11:00</td><td>1º Turno</td><td>BTE-40</td><td class="pt-activity">MOBILIZACAO DA EQUIPE E PREPARACAO DO LOCAL PARA INICIO DOS TRABALHOS</td><td class="num">4h</td>
+          <td class="pt-status-cell"><select class="pt-status-select" onchange="setStatus(this)"><option value="">Pendente</option><option value="andamento">Em Andamento</option><option value="concluida">Concluída</option></select></td>
+        </tr>
+        <tr data-date="2026-08-27" data-setor="1º Turno" data-resp="BTE-40" data-os="BTE-40-02" data-hours="3" data-key="tgm-2">
+          <td>27/08</td><td>11:00–14:00</td><td>1º Turno</td><td>BTE-40</td><td class="pt-activity">REMOVER PROTECOES DE ACOPLAMENTOS</td><td class="num">3h</td>
+          <td class="pt-status-cell"><select class="pt-status-select" onchange="setStatus(this)"><option value="">Pendente</option><option value="andamento">Em Andamento</option><option value="concluida">Concluída</option></select></td>
+        </tr>
+        <tr data-date="2026-08-27" data-setor="1º Turno" data-resp="BTE-40" data-os="BTE-40-03" data-hours="3" data-key="tgm-3">
+          <td>27/08</td><td>14:00–17:00</td><td>1º Turno</td><td>BTE-40</td><td class="pt-activity">DESACOPLAR TURBINA/REDUTOR/MAQUINA ACIONADA E REMOVER ESPACADOR ACOPLAMENTO ALTA ROTACAO</td><td class="num">3h</td>
+          <td class="pt-status-cell"><select class="pt-status-select" onchange="setStatus(this)"><option value="">Pendente</option><option value="andamento">Em Andamento</option><option value="concluida">Concluída</option></select></td>
+        </tr>
+        <tr data-date="2026-08-27" data-setor="2º Turno" data-resp="BTE-40" data-os="BTE-40-04" data-hours="3" data-key="tgm-4">
+          <td>27/08</td><td>17:00–20:00</td><td>2º Turno</td><td>BTE-40</td><td class="pt-activity">INSPECAO VISUAL DOS ACOPLAMENTOS</td><td class="num">3h</td>
+          <td class="pt-status-cell"><select class="pt-status-select" onchange="setStatus(this)"><option value="">Pendente</option><option value="andamento">Em Andamento</option><option value="concluida">Concluída</option></select></td>
+        </tr>
+        <tr data-date="2026-08-28" data-setor="1º Turno" data-resp="BTE-40" data-os="BTE-40-05" data-hours="4" data-key="tgm-5">
+          <td>28/08</td><td>07:00–11:00</td><td>1º Turno</td><td>BTE-40</td><td class="pt-activity">ABERTURA DAS TAMPAS DOS CORPOS DOS MANCAIS DA TURBINA</td><td class="num">4h</td>
+          <td class="pt-status-cell"><select class="pt-status-select" onchange="setStatus(this)"><option value="">Pendente</option><option value="andamento">Em Andamento</option><option value="concluida">Concluída</option></select></td>
+        </tr>
+        <tr data-date="2026-08-28" data-setor="1º Turno" data-resp="BTE-40" data-os="BTE-40-06" data-hours="3" data-key="tgm-6">
+          <td>28/08</td><td>11:00–14:00</td><td>1º Turno</td><td>BTE-40</td><td class="pt-activity">INSPECAO DAS FOLGAS RADIAIS E AXIAIS DOS MANCAIS E ANEIS DE VEDACAO DE OLEO</td><td class="num">3h</td>
+          <td class="pt-status-cell"><select class="pt-status-select" onchange="setStatus(this)"><option value="">Pendente</option><option value="andamento">Em Andamento</option><option value="concluida">Concluída</option></select></td>
+        </tr>
+        <tr data-date="2026-08-28" data-setor="1º Turno" data-resp="BTE-40" data-os="BTE-40-07" data-hours="3" data-key="tgm-7">
+          <td>28/08</td><td>14:00–17:00</td><td>1º Turno</td><td>BTE-40</td><td class="pt-activity">REMOVER ANEIS DE VEDACAO DE OLEO, LIMPEZA E INSPECAO VISUAL</td><td class="num">3h</td>
+          <td class="pt-status-cell"><select class="pt-status-select" onchange="setStatus(this)"><option value="">Pendente</option><option value="andamento">Em Andamento</option><option value="concluida">Concluída</option></select></td>
+        </tr>
+        <tr data-date="2026-08-28" data-setor="2º Turno" data-resp="BTE-40" data-os="BTE-40-08" data-hours="6" data-key="tgm-8">
+          <td>28/08</td><td>17:00–23:00</td><td>2º Turno</td><td>BTE-40</td><td class="pt-activity">REMOVER MANCAIS, LIMPEZA, POLIMENTO E INSPECAO VISUAL DOS MANCAIS</td><td class="num">6h</td>
+          <td class="pt-status-cell"><select class="pt-status-select" onchange="setStatus(this)"><option value="">Pendente</option><option value="andamento">Em Andamento</option><option value="concluida">Concluída</option></select></td>
+        </tr>
+        <tr data-date="2026-08-29" data-setor="1º Turno" data-resp="BTE-40" data-os="BTE-40-09" data-hours="3" data-key="tgm-9">
+          <td>29/08</td><td>07:00–10:00</td><td>1º Turno</td><td>BTE-40</td><td class="pt-activity">VALVULA DE FECHO RAPIDO - DESACOPLAR TUBULACOES DE OLEO DO CILINDRO HIDRAULICO</td><td class="num">3h</td>
+          <td class="pt-status-cell"><select class="pt-status-select" onchange="setStatus(this)"><option value="">Pendente</option><option value="andamento">Em Andamento</option><option value="concluida">Concluída</option></select></td>
+        </tr>
+        <tr data-date="2026-08-29" data-setor="1º Turno" data-resp="BTE-40" data-os="BTE-40-10" data-hours="4" data-key="tgm-10">
+          <td>29/08</td><td>10:00–14:00</td><td>1º Turno</td><td>BTE-40</td><td class="pt-activity">VALVULA DE FECHO RAPIDO - REMOVER CILINDRO, LIMPEZA E INSPECAO PARTES INTERNAS DE VAPOR</td><td class="num">4h</td>
+          <td class="pt-status-cell"><select class="pt-status-select" onchange="setStatus(this)"><option value="">Pendente</option><option value="andamento">Em Andamento</option><option value="concluida">Concluída</option></select></td>
+        </tr>
+        <tr data-date="2026-08-29" data-setor="1º Turno" data-resp="BTE-40" data-os="BTE-40-11" data-hours="3" data-key="tgm-11">
+          <td>29/08</td><td>14:00–17:00</td><td>1º Turno</td><td>BTE-40</td><td class="pt-activity">VALVULA DE REGULAGEM - DESACOPLAR TUBULACOES DE OLEO DE CONTROLE E REMOVER SERVOS MOTORES</td><td class="num">3h</td>
+          <td class="pt-status-cell"><select class="pt-status-select" onchange="setStatus(this)"><option value="">Pendente</option><option value="andamento">Em Andamento</option><option value="concluida">Concluída</option></select></td>
+        </tr>
+        <tr data-date="2026-08-29" data-setor="2º Turno" data-resp="BTE-40" data-os="BTE-40-12" data-hours="5" data-key="tgm-12">
+          <td>29/08</td><td>17:00–22:00</td><td>2º Turno</td><td>BTE-40</td><td class="pt-activity">VALVULA DE REGULAGEM - REMOVER HASTES, DESMONTAGEM LIMPEZA E INSPECAO DOS SERVOS MOTORES</td><td class="num">5h</td>
+          <td class="pt-status-cell"><select class="pt-status-select" onchange="setStatus(this)"><option value="">Pendente</option><option value="andamento">Em Andamento</option><option value="concluida">Concluída</option></select></td>
+        </tr>
+        <tr data-date="2026-08-29" data-setor="2º Turno" data-resp="BTE-40" data-os="BTE-40-13" data-hours="4" data-key="tgm-13">
+          <td>29/08</td><td>22:00–02:00</td><td>2º Turno</td><td>BTE-40</td><td class="pt-activity">ABERTURA DA CARCACA DA TURBINA - INSPECAO E REGISTRO DE FOLGAS INTERNAS RADIAIS E AXIAIS</td><td class="num">4h</td>
+          <td class="pt-status-cell"><select class="pt-status-select" onchange="setStatus(this)"><option value="">Pendente</option><option value="andamento">Em Andamento</option><option value="concluida">Concluída</option></select></td>
+        </tr>
+        <tr data-date="2026-08-29" data-setor="3º Turno" data-resp="BTE-40" data-os="BTE-40-14" data-hours="5" data-key="tgm-14">
+          <td>29/08</td><td>22:30–03:30</td><td>3º Turno</td><td>BTE-40</td><td class="pt-activity">INSPECAO VISUAL E REGISTRO CONDICOES GERAIS DO ROTOR, BUCHAS DE LABIRINTO E DIAFRAGMAS</td><td class="num">5h</td>
+          <td class="pt-status-cell"><select class="pt-status-select" onchange="setStatus(this)"><option value="">Pendente</option><option value="andamento">Em Andamento</option><option value="concluida">Concluída</option></select></td>
+        </tr>
+        <tr data-date="2026-08-30" data-setor="1º Turno" data-resp="BTE-40" data-os="BTE-40-15" data-hours="8" data-key="tgm-15">
+          <td>30/08</td><td>07:00–15:00</td><td>1º Turno</td><td>BTE-40</td><td class="pt-activity">JATEAMENTO DE GELO SECO DO ROTOR (ACOMPANHAMENTO TGM)</td><td class="num">8h</td>
+          <td class="pt-status-cell"><select class="pt-status-select" onchange="setStatus(this)"><option value="">Pendente</option><option value="andamento">Em Andamento</option><option value="concluida">Concluída</option></select></td>
+        </tr>
+        <tr data-date="2026-08-31" data-setor="1º Turno" data-resp="BTE-40" data-os="BTE-40-16" data-hours="8" data-key="tgm-16">
+          <td>31/08</td><td>07:00–15:00</td><td>1º Turno</td><td>BTE-40</td><td class="pt-activity">JATEAMENTO DE GELO SECO DO PORTA PALHETAS I E II (ACOMPANHAMENTO TGM)</td><td class="num">8h</td>
+          <td class="pt-status-cell"><select class="pt-status-select" onchange="setStatus(this)"><option value="">Pendente</option><option value="andamento">Em Andamento</option><option value="concluida">Concluída</option></select></td>
+        </tr>
+        <tr data-date="2026-08-31" data-setor="2º Turno" data-resp="BTE-40" data-os="BTE-40-17" data-hours="6" data-key="tgm-17">
+          <td>31/08</td><td>17:00–23:00</td><td>2º Turno</td><td>BTE-40</td><td class="pt-activity">JATEAMENTO DE GELO SECO DO PORTA PALHETAS III E IV (ACOMPANHAMENTO TGM)</td><td class="num">6h</td>
+          <td class="pt-status-cell"><select class="pt-status-select" onchange="setStatus(this)"><option value="">Pendente</option><option value="andamento">Em Andamento</option><option value="concluida">Concluída</option></select></td>
+        </tr>
+        <tr data-date="2026-09-01" data-setor="1º Turno" data-resp="BTE-40" data-os="BTE-40-18" data-hours="5" data-key="tgm-18">
+          <td>01/09</td><td>07:00–12:00</td><td>1º Turno</td><td>BTE-40</td><td class="pt-activity">JATEAMENTO DE GELO SECO COMPONENTES VALVULA DE REGULAGEM (ACOMPANHAMENTO TGM)</td><td class="num">5h</td>
+          <td class="pt-status-cell"><select class="pt-status-select" onchange="setStatus(this)"><option value="">Pendente</option><option value="andamento">Em Andamento</option><option value="concluida">Concluída</option></select></td>
+        </tr>
+        <tr data-date="2026-09-01" data-setor="1º Turno" data-resp="BTE-40" data-os="BTE-40-19" data-hours="5" data-key="tgm-19">
+          <td>01/09</td><td>12:00–17:00</td><td>1º Turno</td><td>BTE-40</td><td class="pt-activity">JATEAMENTO DE GELO SECO COMPONENTES VALVULA DE FECHO RAPIDO (ACOMPANHAMENTO TGM)</td><td class="num">5h</td>
+          <td class="pt-status-cell"><select class="pt-status-select" onchange="setStatus(this)"><option value="">Pendente</option><option value="andamento">Em Andamento</option><option value="concluida">Concluída</option></select></td>
+        </tr>
+        <tr data-date="2026-09-02" data-setor="1º Turno" data-resp="BTE-40" data-os="BTE-40-20" data-hours="6" data-key="tgm-20">
+          <td>02/09</td><td>07:00–13:00</td><td>1º Turno</td><td>BTE-40</td><td class="pt-activity">MONTAGEM DOS DIAFRAGMAS/PORTA PALHETAS NA CARCACA DA TURBINA</td><td class="num">6h</td>
+          <td class="pt-status-cell"><select class="pt-status-select" onchange="setStatus(this)"><option value="">Pendente</option><option value="andamento">Em Andamento</option><option value="concluida">Concluída</option></select></td>
+        </tr>
+        <tr data-date="2026-09-02" data-setor="1º Turno" data-resp="BTE-40" data-os="BTE-40-21" data-hours="4" data-key="tgm-21">
+          <td>02/09</td><td>13:00–17:00</td><td>1º Turno</td><td>BTE-40</td><td class="pt-activity">MONTAGEM DOS INTERNOS E ROTOR NA CARCACA DA TURBINA</td><td class="num">4h</td>
+          <td class="pt-status-cell"><select class="pt-status-select" onchange="setStatus(this)"><option value="">Pendente</option><option value="andamento">Em Andamento</option><option value="concluida">Concluída</option></select></td>
+        </tr>
+        <tr data-date="2026-09-02" data-setor="2º Turno" data-resp="BTE-40" data-os="BTE-40-22" data-hours="5" data-key="tgm-22">
+          <td>02/09</td><td>17:00–22:00</td><td>2º Turno</td><td>BTE-40</td><td class="pt-activity">REGISTRO FINAL DE FOLGAS INTERNAS E VERIFICACAO DO CONTATO DOS MANCAIS E PASTILHAS</td><td class="num">5h</td>
+          <td class="pt-status-cell"><select class="pt-status-select" onchange="setStatus(this)"><option value="">Pendente</option><option value="andamento">Em Andamento</option><option value="concluida">Concluída</option></select></td>
+        </tr>
+        <tr data-date="2026-09-03" data-setor="1º Turno" data-resp="BTE-40" data-os="BTE-40-23" data-hours="5" data-key="tgm-23">
+          <td>03/09</td><td>07:00–12:00</td><td>1º Turno</td><td>BTE-40</td><td class="pt-activity">TORQUEAMENTO FINAL DA CARCACA CONFORME PROCEDIMENTO DO FABRICANTE</td><td class="num">5h</td>
+          <td class="pt-status-cell"><select class="pt-status-select" onchange="setStatus(this)"><option value="">Pendente</option><option value="andamento">Em Andamento</option><option value="concluida">Concluída</option></select></td>
+        </tr>
+        <tr data-date="2026-09-03" data-setor="1º Turno" data-resp="BTE-40" data-os="BTE-40-24" data-hours="5" data-key="tgm-24">
+          <td>03/09</td><td>12:00–17:00</td><td>1º Turno</td><td>BTE-40</td><td class="pt-activity">MONTAGEM FINAL DA VALVULA DE FECHO RAPIDO</td><td class="num">5h</td>
+          <td class="pt-status-cell"><select class="pt-status-select" onchange="setStatus(this)"><option value="">Pendente</option><option value="andamento">Em Andamento</option><option value="concluida">Concluída</option></select></td>
+        </tr>
+        <tr data-date="2026-09-03" data-setor="2º Turno" data-resp="BTE-40" data-os="BTE-40-25" data-hours="6" data-key="tgm-25">
+          <td>03/09</td><td>17:00–23:00</td><td>2º Turno</td><td>BTE-40</td><td class="pt-activity">MONTAGEM DOS CESTOS/HASTES E SERVOS MOTORES DA VALVULA DE REGULAGEM</td><td class="num">6h</td>
+          <td class="pt-status-cell"><select class="pt-status-select" onchange="setStatus(this)"><option value="">Pendente</option><option value="andamento">Em Andamento</option><option value="concluida">Concluída</option></select></td>
+        </tr>
+        <tr data-date="2026-09-04" data-setor="1º Turno" data-resp="BTE-40" data-os="BTE-40-26" data-hours="4" data-key="tgm-26">
+          <td>04/09</td><td>07:00–11:00</td><td>1º Turno</td><td>BTE-40</td><td class="pt-activity">CONEXAO DAS LINHAS DE OLEO DE CONTROLE</td><td class="num">4h</td>
+          <td class="pt-status-cell"><select class="pt-status-select" onchange="setStatus(this)"><option value="">Pendente</option><option value="andamento">Em Andamento</option><option value="concluida">Concluída</option></select></td>
+        </tr>
+        <tr data-date="2026-09-04" data-setor="1º Turno" data-resp="BTE-40" data-os="BTE-40-27" data-hours="5" data-key="tgm-27">
+          <td>04/09</td><td>11:00–16:00</td><td>1º Turno</td><td>BTE-40</td><td class="pt-activity">ACOPLAR TURBINA/REDUTOR/MAQUINA ACIONADA</td><td class="num">5h</td>
+          <td class="pt-status-cell"><select class="pt-status-select" onchange="setStatus(this)"><option value="">Pendente</option><option value="andamento">Em Andamento</option><option value="concluida">Concluída</option></select></td>
+        </tr>
+        <tr data-date="2026-09-04" data-setor="1º Turno" data-resp="BTE-40" data-os="BTE-40-28" data-hours="1" data-key="tgm-28">
+          <td>04/09</td><td>16:00–17:00</td><td>1º Turno</td><td>BTE-40</td><td class="pt-activity">FECHAR PROTECOES DOS ACOPLAMENTOS</td><td class="num">1h</td>
+          <td class="pt-status-cell"><select class="pt-status-select" onchange="setStatus(this)"><option value="">Pendente</option><option value="andamento">Em Andamento</option><option value="concluida">Concluída</option></select></td>
+        </tr>
+        <tr data-date="2026-09-05" data-setor="1º Turno" data-resp="BTE-40" data-os="BTE-40-29" data-hours="4" data-key="tgm-29">
+          <td>05/09</td><td>07:00–11:00</td><td>1º Turno</td><td>BTE-40</td><td class="pt-activity">REVISAO DAS VALVULAS DE ALIVIO E REDUTORAS DE PRESSAO</td><td class="num">4h</td>
+          <td class="pt-status-cell"><select class="pt-status-select" onchange="setStatus(this)"><option value="">Pendente</option><option value="andamento">Em Andamento</option><option value="concluida">Concluída</option></select></td>
+        </tr>
+        <tr data-date="2026-09-05" data-setor="1º Turno" data-resp="BTE-40" data-os="BTE-40-30" data-hours="3" data-key="tgm-30">
+          <td>05/09</td><td>11:00–14:00</td><td>1º Turno</td><td>BTE-40</td><td class="pt-activity">INSPECAO VISUAL DAS TUBULACOES DE OLEO DA TURBINA</td><td class="num">3h</td>
+          <td class="pt-status-cell"><select class="pt-status-select" onchange="setStatus(this)"><option value="">Pendente</option><option value="andamento">Em Andamento</option><option value="concluida">Concluída</option></select></td>
+        </tr>
+        <tr data-date="2026-09-05" data-setor="2º Turno" data-resp="BTE-40" data-os="BTE-40-31" data-hours="4" data-key="tgm-31">
+          <td>05/09</td><td>17:00–21:00</td><td>2º Turno</td><td>BTE-40</td><td class="pt-activity">LIMPEZA DAS FACES DE JUNCAO COM PEDRA ABRASIVA E INSPECAO ELEMENTOS DE UNIAO</td><td class="num">4h</td>
+          <td class="pt-status-cell"><select class="pt-status-select" onchange="setStatus(this)"><option value="">Pendente</option><option value="andamento">Em Andamento</option><option value="concluida">Concluída</option></select></td>
+        </tr>
+        <tr data-date="2026-09-06" data-setor="1º Turno" data-resp="BTE-40" data-os="BTE-40-32" data-hours="6" data-key="tgm-32">
+          <td>06/09</td><td>07:00–13:00</td><td>1º Turno</td><td>BTE-40</td><td class="pt-activity">COMISSIONAMENTO FRIO - SISTEMAS HIDRAULICO, VAPOR, EXTRACAO DE CONDENSADO, REGULAGEM E SEGURANCA</td><td class="num">6h</td>
+          <td class="pt-status-cell"><select class="pt-status-select" onchange="setStatus(this)"><option value="">Pendente</option><option value="andamento">Em Andamento</option><option value="concluida">Concluída</option></select></td>
+        </tr>
+        <tr data-date="2026-09-06" data-setor="1º Turno" data-resp="BTE-40" data-os="BTE-40-33" data-hours="3" data-key="tgm-33">
+          <td>06/09</td><td>13:00–16:00</td><td>1º Turno</td><td>BTE-40</td><td class="pt-activity">TESTES DO SISTEMA DE GIRO LENTO E SISTEMA DE SELAGEM</td><td class="num">3h</td>
+          <td class="pt-status-cell"><select class="pt-status-select" onchange="setStatus(this)"><option value="">Pendente</option><option value="andamento">Em Andamento</option><option value="concluida">Concluída</option></select></td>
+        </tr>
+        <tr data-date="2026-09-06" data-setor="2º Turno" data-resp="BTE-40" data-os="BTE-40-34" data-hours="4" data-key="tgm-34">
+          <td>06/09</td><td>17:00–21:00</td><td>2º Turno</td><td>BTE-40</td><td class="pt-activity">TESTES DE INTERTRAVAMENTO DA TURBINA E ATUACOES DE PROTECOES</td><td class="num">4h</td>
+          <td class="pt-status-cell"><select class="pt-status-select" onchange="setStatus(this)"><option value="">Pendente</option><option value="andamento">Em Andamento</option><option value="concluida">Concluída</option></select></td>
+        </tr>
+        <tr data-date="2026-09-06" data-setor="2º Turno" data-resp="BTE-40" data-os="BTE-40-35" data-hours="4" data-key="tgm-35">
+          <td>06/09</td><td>21:00–01:00</td><td>2º Turno</td><td>BTE-40</td><td class="pt-activity">CALIBRACAO DO CPC E SERVO-MOTORES DAS VALVULAS DE ADMISSAO E EXTRACAO DE VAPOR</td><td class="num">4h</td>
+          <td class="pt-status-cell"><select class="pt-status-select" onchange="setStatus(this)"><option value="">Pendente</option><option value="andamento">Em Andamento</option><option value="concluida">Concluída</option></select></td>
+        </tr>
+        <tr data-date="2026-09-07" data-setor="1º Turno" data-resp="BTE-40" data-os="BTE-40-36" data-hours="4" data-key="tgm-36">
+          <td>07/09</td><td>07:00–11:00</td><td>1º Turno</td><td>BTE-40</td><td class="pt-activity">COMISSIONAMENTO QUENTE - ACOMPANHAR AQUECIMENTO DA LINHA DE VAPOR E TURBINA</td><td class="num">4h</td>
+          <td class="pt-status-cell"><select class="pt-status-select" onchange="setStatus(this)"><option value="">Pendente</option><option value="andamento">Em Andamento</option><option value="concluida">Concluída</option></select></td>
+        </tr>
+        <tr data-date="2026-09-07" data-setor="1º Turno" data-resp="BTE-40" data-os="BTE-40-37" data-hours="5" data-key="tgm-37">
+          <td>07/09</td><td>11:00–16:00</td><td>1º Turno</td><td>BTE-40</td><td class="pt-activity">TESTE DE SOBREVELOCIDADE E TESTES EM VAZIO CONFORME PROCEDIMENTO TGM</td><td class="num">5h</td>
+          <td class="pt-status-cell"><select class="pt-status-select" onchange="setStatus(this)"><option value="">Pendente</option><option value="andamento">Em Andamento</option><option value="concluida">Concluída</option></select></td>
+        </tr>
+        <tr data-date="2026-09-07" data-setor="2º Turno" data-resp="BTE-40" data-os="BTE-40-38" data-hours="4" data-key="tgm-38">
+          <td>07/09</td><td>17:00–21:00</td><td>2º Turno</td><td>BTE-40</td><td class="pt-activity">AJUSTAR PARAMETROS DE DINAMICA DO REGULADOR DE VELOCIDADE SE NECESSARIO</td><td class="num">4h</td>
+          <td class="pt-status-cell"><select class="pt-status-select" onchange="setStatus(this)"><option value="">Pendente</option><option value="andamento">Em Andamento</option><option value="concluida">Concluída</option></select></td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+  </div>
+
+  <footer>TGM — painel de indicadores. Estrutura clonada do painel da Parada Elétrica; tarefas cadastradas aqui são próprias do TGM.</footer>
+</div>
+</div>
+
+<script>
+  var STATUS_STORAGE_KEY = 'tgm-pt-status-v1';
+
+  function todayIso() {
+    var now = new Date();
+    return now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+  }
+  function rowStatusKey(row) {
+    if (row.classList.contains('pt-done')) return 'concluida';
+    if (row.classList.contains('pt-andamento')) return 'andamento';
+    return row.getAttribute('data-date') < todayIso() ? 'atrasada' : 'pendente';
+  }
+  function ptRows() {
+    return Array.prototype.slice.call(document.querySelectorAll('#pt-tbody tr[data-key]'));
+  }
+
+  function loadStatusState() {
+    try { return JSON.parse(localStorage.getItem(STATUS_STORAGE_KEY)) || {}; }
+    catch (e) { return {}; }
+  }
+  function saveStatusState(state) {
+    try { localStorage.setItem(STATUS_STORAGE_KEY, JSON.stringify(state)); }
+    catch (e) {}
+  }
+  function applyStatusVisual(row, status) {
+    row.classList.toggle('pt-done', status === 'concluida');
+    row.classList.toggle('pt-andamento', status === 'andamento');
+    var select = row.querySelector('.pt-status-select');
+    if (select) select.value = status || '';
+  }
+  function setStatus(select) {
+    var row = select.closest('tr');
+    var key = row.getAttribute('data-key');
+    var state = loadStatusState();
+    if (select.value) { state[key] = select.value; } else { delete state[key]; }
+    saveStatusState(state);
+    applyStatusVisual(row, select.value);
+    renderAll();
+  }
+  function restoreStatusState() {
+    var state = loadStatusState();
+    ptRows().forEach(function(row) {
+      var key = row.getAttribute('data-key');
+      if (state[key]) applyStatusVisual(row, state[key]);
+    });
+  }
+
+  function renderStatTiles() {
+    var rows = ptRows();
+    var totalHours = 0, done = 0, andamento = 0;
+    rows.forEach(function(row) {
+      totalHours += parseFloat(row.getAttribute('data-hours')) || 0;
+      var s = rowStatusKey(row);
+      if (s === 'concluida') done++;
+      if (s === 'andamento') andamento++;
+    });
+    var tiles = [
+      { val: rows.length, lbl: 'tarefas cadastradas' },
+      { val: totalHours.toFixed(1) + 'h', lbl: 'horas alocadas' },
+      { val: done, lbl: 'concluídas' },
+      { val: andamento, lbl: 'em andamento' }
+    ];
+    document.getElementById('stat-row').innerHTML = tiles.map(function(t) {
+      return '<div class="stat-tile"><div class="val">' + t.val + '</div><div class="lbl">' + t.lbl + '</div></div>';
+    }).join('');
+    document.getElementById('header-sub').textContent = 'gerado em ' + new Date().toLocaleString('pt-BR');
+  }
+
+  function renderStatusOverview() {
+    var rows = ptRows();
+    var counts = { pendente: 0, andamento: 0, concluida: 0, atrasada: 0 };
+    rows.forEach(function(row) { counts[rowStatusKey(row)]++; });
+
+    var order = [
+      { key: 'pendente', label: 'Pendente', color: 'var(--series-1)' },
+      { key: 'andamento', label: 'Em Andamento', color: 'var(--warn-border)' },
+      { key: 'concluida', label: 'Concluída', color: 'var(--series-3)' },
+      { key: 'atrasada', label: 'Atrasada', color: 'var(--status-critical)' }
+    ];
+
+    document.getElementById('status-overview-table').innerHTML = order.map(function(o) {
+      return '<tr><td>' + o.label + '</td><td class="num">' + counts[o.key] + '</td></tr>';
+    }).join('');
+
+    var container = document.getElementById('status-overview-chart');
+    var W = container.clientWidth > 40 ? container.clientWidth : 420;
+    var H = 260;
+    var marginLeft = 30, marginRight = 8, marginTop = 10, marginBottom = 34;
+    var plotW = W - marginLeft - marginRight;
+    var plotH = H - marginTop - marginBottom;
+    var maxVal = Math.max.apply(null, order.map(function(o) { return counts[o.key]; }));
+    var step = maxVal <= 10 ? 2 : (maxVal <= 20 ? 4 : (maxVal <= 40 ? 5 : 10));
+    var yMax = Math.max(step, Math.ceil((maxVal || 1) / step) * step);
+    function y(v) { return marginTop + plotH - (v / yMax) * plotH; }
+
+    var gridSvg = '';
+    var numTicks = yMax / step;
+    for (var i = 0; i <= numTicks; i++) {
+      var v = i * step;
+      var yy = y(v);
+      gridSvg += '<line x1="' + marginLeft + '" y1="' + yy + '" x2="' + (W - marginRight) + '" y2="' + yy + '" stroke="var(--gridline)" stroke-width="1" stroke-dasharray="3,3"/>';
+      gridSvg += '<text x="' + (marginLeft - 6) + '" y="' + (yy + 4) + '" text-anchor="end" font-size="12" fill="var(--text-muted)">' + v + '</text>';
+    }
+    gridSvg += '<line x1="' + marginLeft + '" y1="' + y(0) + '" x2="' + (W - marginRight) + '" y2="' + y(0) + '" stroke="var(--baseline)" stroke-width="1.5"/>';
+
+    var n = order.length;
+    var bandW = plotW / n;
+    var barW = bandW * 0.42;
+    var barsSvg = '';
+    order.forEach(function(o, idx) {
+      var val = counts[o.key];
+      var bx = marginLeft + idx * bandW + (bandW - barW) / 2;
+      var labelX = marginLeft + idx * bandW + bandW / 2;
+      if (val > 0) {
+        var by = y(val);
+        var bh = y(0) - by;
+        barsSvg += '<rect x="' + bx + '" y="' + by + '" width="' + barW + '" height="' + bh + '" fill="' + o.color + '"><title>' + o.label + ': ' + val + '</title></rect>';
+        barsSvg += '<text x="' + labelX + '" y="' + (y(0) + 13) + '" font-size="12" fill="var(--text-secondary)" text-anchor="middle">' + val + '</text>';
+      }
+      barsSvg += '<text x="' + labelX + '" y="' + (y(0) + 28) + '" font-size="11.5" fill="var(--text-secondary)" text-anchor="middle">' + o.label + '</text>';
+    });
+
+    var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%; height:auto; display:block;">' + gridSvg + barsSvg + '</svg>';
+    container.innerHTML = svg;
+  }
+
+  function renderSCurve() {
+    var rows = ptRows();
+    var container = document.getElementById('scurve-chart');
+    if (!rows.length) { container.innerHTML = '<div class="empty-msg">Nenhuma tarefa cadastrada ainda.</div>'; return; }
+
+    var dates = rows.map(function(r) { return r.getAttribute('data-date'); }).sort();
+    var start = new Date(dates[0] + 'T00:00:00');
+    var end = new Date(dates[dates.length - 1] + 'T00:00:00');
+    var days = [];
+    for (var d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+      var iso = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+      var label = String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0');
+      days.push({ iso: iso, label: label });
+    }
+
+    var today = todayIso();
+    var taskData = rows.map(function(row) {
+      return { date: row.getAttribute('data-date'), hours: parseFloat(row.getAttribute('data-hours')) || 0, done: row.classList.contains('pt-done') };
+    });
+    var total = taskData.reduce(function(s, t) { return s + t.hours; }, 0);
+
+    var plannedCum = [], actualCum = [];
+    var runningPlanned = 0, runningActual = 0;
+    days.forEach(function(day) {
+      taskData.forEach(function(t) {
+        if (t.date === day.iso) {
+          runningPlanned += t.hours;
+          if (t.done) runningActual += t.hours;
+        }
+      });
+      plannedCum.push(total ? (runningPlanned / total * 100) : 0);
+      actualCum.push(day.iso <= today ? (total ? (runningActual / total * 100) : 0) : null);
+    });
+
+    var W = container.clientWidth > 40 ? container.clientWidth : 900;
+    var H = 340;
+    var narrow = W < 700;
+    var marginLeft = 34, marginRight = 16, marginTop = 16, marginBottom = narrow ? 80 : 60;
+    var plotW = W - marginLeft - marginRight;
+    var plotH = H - marginTop - marginBottom;
+    var n = days.length;
+    var stepX = n > 1 ? plotW / (n - 1) : plotW;
+
+    function x(i) { return marginLeft + i * stepX; }
+    function y(pct) { return marginTop + plotH - (pct / 100) * plotH; }
+
+    var gridSvg = '';
+    [0, 20, 40, 60, 80, 100].forEach(function(v) {
+      var yy = y(v);
+      gridSvg += '<line x1="' + marginLeft + '" y1="' + yy + '" x2="' + (W - marginRight) + '" y2="' + yy + '" stroke="var(--gridline)" stroke-width="1" stroke-dasharray="3,3"/>';
+      gridSvg += '<text x="' + (marginLeft - 6) + '" y="' + (yy + 4) + '" text-anchor="end" font-size="11.5" fill="var(--text-muted)">' + v + '%</text>';
+    });
+    gridSvg += '<line x1="' + marginLeft + '" y1="' + y(0) + '" x2="' + (W - marginRight) + '" y2="' + y(0) + '" stroke="var(--baseline)" stroke-width="1.5"/>';
+
+    var todayIdx = -1;
+    days.forEach(function(day, i) { if (day.iso === today) todayIdx = i; });
+    var todaySvg = '';
+    if (todayIdx >= 0) {
+      var tx = x(todayIdx);
+      todaySvg += '<line x1="' + tx + '" y1="' + marginTop + '" x2="' + tx + '" y2="' + y(0) + '" stroke="var(--text-muted)" stroke-width="1" stroke-dasharray="2,2"/>';
+      todaySvg += '<text x="' + tx + '" y="' + (marginTop - 4) + '" font-size="10.5" fill="var(--text-muted)" text-anchor="middle">hoje</text>';
+    }
+
+    function buildPath(values) {
+      var pts = [];
+      values.forEach(function(v, i) {
+        if (v === null || v === undefined) return;
+        pts.push(x(i) + ',' + y(v));
+      });
+      return pts.length ? 'M' + pts.join(' L') : '';
+    }
+
+    var plannedPath = buildPath(plannedCum);
+    var actualPath = buildPath(actualCum);
+
+    var linesSvg = '';
+    if (plannedPath) linesSvg += '<path d="' + plannedPath + '" fill="none" stroke="var(--series-1)" stroke-width="2"/>';
+    if (actualPath) linesSvg += '<path d="' + actualPath + '" fill="none" stroke="var(--series-3)" stroke-width="2"/>';
+
+    var pointsSvg = '';
+    plannedCum.forEach(function(v, i) {
+      pointsSvg += '<circle cx="' + x(i) + '" cy="' + y(v) + '" r="2.5" fill="var(--series-1)"><title>' + days[i].label + ' — Planejado: ' + v.toFixed(1) + '%</title></circle>';
+    });
+    actualCum.forEach(function(v, i) {
+      if (v === null) return;
+      pointsSvg += '<circle cx="' + x(i) + '" cy="' + y(v) + '" r="2.5" fill="var(--series-3)"><title>' + days[i].label + ' — Realizado: ' + v.toFixed(1) + '%</title></circle>';
+    });
+
+    var labelAngle = narrow ? -90 : -45;
+    var labelFontSize = narrow ? 11 : 11.5;
+    var labelsSvg = '';
+    days.forEach(function(day, i) {
+      var lx = x(i);
+      var ly = y(0) + 16;
+      labelsSvg += '<text x="' + lx + '" y="' + ly + '" font-size="' + labelFontSize + '" fill="var(--text-secondary)" text-anchor="end" transform="rotate(' + labelAngle + ' ' + lx + ' ' + ly + ')">' + day.label + '</text>';
+    });
+
+    var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%; height:auto; display:block;">' + gridSvg + todaySvg + linesSvg + pointsSvg + labelsSvg + '</svg>';
+    container.innerHTML = svg;
+  }
+
+  function renderOsCards() {
+    var rows = ptRows();
+    var container = document.getElementById('os-cards');
+    if (!rows.length) { container.innerHTML = '<div class="empty-msg">Nenhuma tarefa cadastrada ainda.</div>'; document.getElementById('os-card-count').textContent = '0 OS'; return; }
+
+    var statusInfo = {
+      pendente: { label: 'Pendente', color: 'var(--series-1)' },
+      andamento: { label: 'Em Andamento', color: 'var(--warn-border)' },
+      concluida: { label: 'Concluída', color: 'var(--series-3)' },
+      atrasada: { label: 'Atrasada', color: 'var(--status-critical)' }
+    };
+    var filterVal = document.getElementById('os-card-status').value;
+
+    var byResp = {};
+    var total = rows.length;
+    var visibleItems = 0;
+    rows.forEach(function(row) {
+      var statusKey = rowStatusKey(row);
+      var resp = row.getAttribute('data-resp');
+      var os = row.getAttribute('data-os');
+      if (!byResp[resp]) byResp[resp] = [];
+      byResp[resp].push({ os: os, statusKey: statusKey });
+    });
+
+    var resps = Object.keys(byResp).sort();
+
+    var html = resps.map(function(resp) {
+      var items = byResp[resp];
+      var visible = filterVal ? items.filter(function(it) { return it.statusKey === filterVal; }) : items;
+      if (filterVal && !visible.length) return '';
+      visibleItems += visible.length;
+      var itemsHtml = visible.map(function(it) {
+        var s = statusInfo[it.statusKey];
+        return '<div class="os-item">' +
+          '<span class="os-item-num">OS ' + it.os + '</span>' +
+          '<span class="os-status" style="background:' + s.color + ';">' + s.label + '</span>' +
+          '</div>';
+      }).join('');
+      return '<div class="os-card">' +
+        '<div class="os-resp">' + resp + '</div>' +
+        '<div class="os-count">' + items.length + ' tarefa' + (items.length === 1 ? '' : 's') + '</div>' +
+        itemsHtml +
+        '</div>';
+    }).join('');
+
+    container.innerHTML = html;
+
+    var countEl = document.getElementById('os-card-count');
+    countEl.textContent = (!filterVal || visibleItems === total) ? (total + ' OS') : (visibleItems + ' de ' + total + ' OS');
+  }
+
+  function renderActivityList() {
+    var rows = ptRows();
+    var container = document.getElementById('activity-list');
+    if (!rows.length) { container.innerHTML = '<div class="empty-msg">Nenhuma tarefa cadastrada ainda.</div>'; return; }
+
+    var groups = {};
+    var order = [];
+    rows.forEach(function(row) {
+      var done = row.classList.contains('pt-done');
+      var os = row.getAttribute('data-os');
+      var setor = row.getAttribute('data-setor');
+      var descEl = row.querySelector('.pt-activity');
+      var desc = descEl ? descEl.textContent.trim() : '';
+      if (!groups[os]) { groups[os] = { total: 0, done: 0, descs: [], setor: setor }; order.push(os); }
+      groups[os].total++;
+      if (done) groups[os].done++;
+      if (groups[os].descs.indexOf(desc) === -1) groups[os].descs.push(desc);
+    });
+
+    order.sort(function(a, b) {
+      var na = parseInt(a, 10), nb = parseInt(b, 10);
+      if (isNaN(na) && isNaN(nb)) return a.localeCompare(b, 'pt-BR');
+      if (isNaN(na)) return 1;
+      if (isNaN(nb)) return -1;
+      return na - nb;
+    });
+
+    var html = order.map(function(os) {
+      var g = groups[os];
+      var pct = Math.round(g.done / g.total * 100);
+      var barColor = pct === 100 ? 'var(--series-3)' : (pct > 0 ? 'var(--warn-border)' : 'var(--series-1)');
+      var desc = g.descs.join('; ');
+      return '<div class="activity-row">' +
+        '<div class="activity-name"><strong>OS ' + os + '</strong> [' + g.setor + '] — ' + desc + (g.total > 1 ? ' <span class="activity-count">(' + g.done + '/' + g.total + ')</span>' : '') + '</div>' +
+        '<div class="activity-pct-wrap">' +
+          '<div class="activity-bar-track"><div class="activity-bar" style="width:' + pct + '%; background:' + barColor + ';"></div></div>' +
+          '<span class="activity-pct">' + pct + '%</span>' +
+        '</div>' +
+        '</div>';
+    }).join('');
+
+    container.innerHTML = html;
+  }
+
+  function renderSetorStatusChart() {
+    var rows = ptRows();
+    var container = document.getElementById('setor-status-chart');
+    var bySetor = {};
+    rows.forEach(function(row) {
+      var setor = row.getAttribute('data-setor');
+      var status = rowStatusKey(row) === 'atrasada' ? 'pendente' : rowStatusKey(row);
+      if (!bySetor[setor]) bySetor[setor] = { concluida: 0, andamento: 0, pendente: 0 };
+      bySetor[setor][status]++;
+    });
+    var setores = Object.keys(bySetor).sort(function(a, b) {
+      var totalA = bySetor[a].concluida + bySetor[a].andamento + bySetor[a].pendente;
+      var totalB = bySetor[b].concluida + bySetor[b].andamento + bySetor[b].pendente;
+      return totalB - totalA;
+    });
+
+    if (!setores.length) { container.innerHTML = '<div class="empty-msg">Nenhuma tarefa cadastrada ainda.</div>'; return; }
+
+    var W = container.clientWidth > 40 ? container.clientWidth : 900;
+    var narrow = W < 500;
+    var marginLeft = narrow ? 88 : 130, marginRight = 34, marginTop = 10, marginBottom = 28;
+    var rowH = 52;
+    var n = setores.length || 1;
+    var H = marginTop + n * rowH + marginBottom;
+    var plotW = W - marginLeft - marginRight;
+
+    var maxVal = 0;
+    setores.forEach(function(s) {
+      var c = bySetor[s];
+      maxVal = Math.max(maxVal, c.concluida, c.andamento, c.pendente);
+    });
+    var step = maxVal <= 10 ? 2 : (maxVal <= 20 ? 4 : (maxVal <= 40 ? 5 : 10));
+    var xMax = Math.max(step, Math.ceil((maxVal || 1) / step) * step);
+    var labelFontSize = narrow ? 11 : 12.5;
+
+    function x(v) { return marginLeft + (v / xMax) * plotW; }
+
+    var plotBottom = marginTop + n * rowH;
+    var bandSvg = '';
+    setores.forEach(function(setor, idx) {
+      if (idx % 2 === 1) {
+        bandSvg += '<rect x="0" y="' + (marginTop + idx * rowH) + '" width="' + W + '" height="' + rowH + '" fill="color-mix(in oklab, var(--gridline) 45%, transparent)"/>';
+      }
+    });
+    var gridSvg = '';
+    var numTicks = xMax / step;
+    for (var i = 0; i <= numTicks; i++) {
+      var v = i * step;
+      var xx = x(v);
+      gridSvg += '<line x1="' + xx + '" y1="' + marginTop + '" x2="' + xx + '" y2="' + plotBottom + '" stroke="var(--gridline)" stroke-width="1" stroke-dasharray="3,3"/>';
+      gridSvg += '<text x="' + xx + '" y="' + (plotBottom + 18) + '" text-anchor="middle" font-size="' + labelFontSize + '" fill="var(--text-muted)">' + v + '</text>';
+    }
+    gridSvg += '<line x1="' + marginLeft + '" y1="' + marginTop + '" x2="' + marginLeft + '" y2="' + plotBottom + '" stroke="var(--baseline)" stroke-width="1.5"/>';
+
+    var barH = 13, barGap = 2;
+    var barsSvg = '', labelsSvg = '';
+    setores.forEach(function(setor, idx) {
+      var c = bySetor[setor];
+      var rowY = marginTop + idx * rowH;
+      var groupY = rowY + (rowH - (barH * 3 + barGap * 2)) / 2;
+      var items = [
+        { v: c.concluida, color: 'var(--series-3)', label: 'concluída' },
+        { v: c.andamento, color: 'var(--warn-border)', label: 'em andamento' },
+        { v: c.pendente, color: 'var(--series-1)', label: 'parada' }
+      ];
+      items.forEach(function(item, bIdx) {
+        var by = groupY + bIdx * (barH + barGap);
+        var bx = x(item.v);
+        var bw = bx - marginLeft;
+        if (item.v > 0) {
+          barsSvg += '<rect x="' + marginLeft + '" y="' + by + '" width="' + bw + '" height="' + barH + '" fill="' + item.color + '"><title>' + setor + ' — ' + item.label + ': ' + item.v + '</title></rect>';
+          labelsSvg += '<text x="' + (bx + 4) + '" y="' + (by + barH - 2.5) + '" font-size="' + (narrow ? 9.5 : 10.5) + '" fill="var(--text-secondary)" text-anchor="start">' + item.v + '</text>';
+        }
+      });
+      var labelY = rowY + rowH / 2;
+      labelsSvg += '<text x="' + (marginLeft - 8) + '" y="' + (labelY + 4) + '" font-size="' + labelFontSize + '" fill="var(--text-secondary)" text-anchor="end">' + setor + '</text>';
+    });
+
+    var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%; height:auto; display:block;">' + bandSvg + gridSvg + barsSvg + labelsSvg + '</svg>';
+    container.innerHTML = svg;
+  }
+
+  function populateFilterOptions() {
+    var rows = ptRows();
+    var setores = Array.from(new Set(rows.map(function(r) { return r.getAttribute('data-setor'); }))).sort(function(a, b) { return a.localeCompare(b, 'pt-BR'); });
+    var resps = Array.from(new Set(rows.map(function(r) { return r.getAttribute('data-resp'); }))).sort(function(a, b) { return a.localeCompare(b, 'pt-BR'); });
+
+    var setorSel = document.getElementById('f-setor');
+    var respSel = document.getElementById('f-resp');
+    var curSetor = setorSel.value, curResp = respSel.value;
+    setorSel.innerHTML = '<option value="">Todos</option>' + setores.map(function(s) { return '<option value="' + s + '">' + s + '</option>'; }).join('');
+    respSel.innerHTML = '<option value="">Todos</option>' + resps.map(function(r) { return '<option value="' + r + '">' + r + '</option>'; }).join('');
+    setorSel.value = curSetor;
+    respSel.value = curResp;
+  }
+
+  function applyPtFilters() {
+    var setorVal = document.getElementById('f-setor').value;
+    var respVal = document.getElementById('f-resp').value;
+    var statusVal = document.getElementById('f-status').value;
+    var rows = ptRows();
+    var visible = 0, doneCount = 0, andamentoCount = 0;
+    rows.forEach(function(row) {
+      var status = rowStatusKey(row);
+      if (status === 'concluida') doneCount++;
+      if (status === 'andamento') andamentoCount++;
+      var ok = (!setorVal || row.getAttribute('data-setor') === setorVal) &&
+               (!respVal || row.getAttribute('data-resp') === respVal) &&
+               (!statusVal || statusVal === status);
+      row.style.display = ok ? '' : 'none';
+      if (ok) visible++;
+    });
+    var total = rows.length;
+    var countEl = document.getElementById('f-count');
+    var label = (visible === total) ? (total + ' tarefas') : (visible + ' de ' + total + ' tarefas');
+    countEl.textContent = label + ' · ' + andamentoCount + ' em andamento · ' + doneCount + ' concluída' + (doneCount === 1 ? '' : 's');
+  }
+  function clearPtFilters() {
+    document.getElementById('f-setor').value = '';
+    document.getElementById('f-resp').value = '';
+    document.getElementById('f-status').value = '';
+    applyPtFilters();
+  }
+  function exportPagePdf() {
+    window.print();
+  }
+
+  function renderAll() {
+    populateFilterOptions();
+    applyPtFilters();
+    renderStatTiles();
+    renderSetorStatusChart();
+    renderStatusOverview();
+    renderSCurve();
+    renderOsCards();
+    renderActivityList();
+  }
+
+  restoreStatusState();
+  renderAll();
+
+  var resizeTimer;
+  window.addEventListener('resize', function() {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(function() {
+      renderSetorStatusChart();
+      renderStatusOverview();
+      renderSCurve();
+    }, 150);
+  });
+</script>
+</body>
+</html>
