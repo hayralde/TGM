@@ -249,7 +249,7 @@
 
   <div class="panel">
     <h2>Tarefas cadastradas</h2>
-    <div class="panel-sub">Lista completa das tarefas. Alterar o status pede uma senha (uma vez por sessão do navegador). Para adicionar uma tarefa nova, edite este arquivo e acrescente uma linha em <code>&lt;tbody id="pt-tbody"&gt;</code> seguindo o padrão das demais (atributos <code>data-date</code>, <code>data-setor</code> = turno, <code>data-resp</code> = TAG, <code>data-os</code>, <code>data-hours</code>, <code>data-key</code>).</div>
+    <div class="panel-sub">Lista completa das tarefas. Para adicionar uma tarefa nova, edite este arquivo e acrescente uma linha em <code>&lt;tbody id="pt-tbody"&gt;</code> seguindo o padrão das demais (atributos <code>data-date</code>, <code>data-setor</code> = turno, <code>data-resp</code> = TAG, <code>data-os</code>, <code>data-hours</code>, <code>data-key</code>).</div>
     <div class="filter-bar">
       <div class="filter-field">
         <label for="f-status">Status</label>
@@ -490,32 +490,10 @@
     var select = row.querySelector('.pt-status-select');
     if (select) select.value = status || '';
   }
-  var EDIT_PASSWORD = 'rrp';
-  var EDIT_AUTH_SESSION_KEY = 'tgm-edit-auth';
-  function isEditAuthorized() {
-    try { return sessionStorage.getItem(EDIT_AUTH_SESSION_KEY) === '1'; }
-    catch (e) { return false; }
-  }
-  function requestEditAuthorization() {
-    var pass = prompt('Digite a senha para alterar o status da tarefa:');
-    if (pass === null) return false;
-    if (pass === EDIT_PASSWORD) {
-      try { sessionStorage.setItem(EDIT_AUTH_SESSION_KEY, '1'); } catch (e) {}
-      return true;
-    }
-    alert('Senha incorreta.');
-    return false;
-  }
   function setStatus(select) {
     var row = select.closest('tr');
     var key = row.getAttribute('data-key');
-    var previousStatus = row.getAttribute('data-current-status') || '';
     var newStatus = select.value;
-    if (newStatus === previousStatus) return;
-    if (!isEditAuthorized() && !requestEditAuthorization()) {
-      select.value = previousStatus;
-      return;
-    }
     applyStatusVisual(row, newStatus);
     renderAll();
     pushRemoteStatus(key, newStatus);
