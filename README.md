@@ -38,7 +38,7 @@ Os painéis de indicadores (stat tiles, gráficos, cards, filtros) recalculam tu
 
 ## Backup e restauração do status
 
-`backup.html` (link no rodapé do painel) baixa um `.json` com o status atual de todas as tarefas (tabela `tgm_task_status` do Supabase) para o computador, e restaura a partir de um arquivo baixado anteriormente. Só o status é coberto — o restante do app (código, tarefas cadastradas) já vive no GitHub e não precisa de backup à parte. Restaurar sobrescreve o status atual para todos os visitantes, por isso pede confirmação antes de gravar.
+`backup.html` (botão no topo do painel, ao lado de "Exportar página em PDF") baixa um `.json` com o status atual de todas as tarefas (tabela `tgm_task_status` do Supabase) para o computador, e restaura a partir de um arquivo baixado anteriormente. Só o status é coberto — o restante do app (código, tarefas cadastradas) já vive no GitHub e não precisa de backup à parte. Restaurar sobrescreve o status atual para todos os visitantes, por isso pede confirmação antes de gravar.
 
 ## Instalar como aplicativo (PWA)
 
