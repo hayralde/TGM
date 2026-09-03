@@ -36,6 +36,10 @@ A numeração (coluna `#`) é gerada automaticamente pelo JS a partir da ordem d
 
 Os painéis de indicadores (stat tiles, gráficos, cards, filtros) recalculam tudo automaticamente a partir das linhas da tabela — não é preciso editar mais nada em outro lugar do arquivo.
 
+## Backup e restauração do status
+
+`backup.html` (link no rodapé do painel) baixa um `.json` com o status atual de todas as tarefas (tabela `tgm_task_status` do Supabase) para o computador, e restaura a partir de um arquivo baixado anteriormente. Só o status é coberto — o restante do app (código, tarefas cadastradas) já vive no GitHub e não precisa de backup à parte. Restaurar sobrescreve o status atual para todos os visitantes, por isso pede confirmação antes de gravar.
+
 ## Instalar como aplicativo (PWA)
 
 O site é um PWA instalável: `manifest.json` + `sw.js` (service worker, cacheia o essencial para abrir mesmo offline) + `icon-192.png`/`icon-512.png` (gerados a partir do `favicon.svg`). No Chrome/Android, um botão "Instalar aplicativo" aparece no topo da página quando o navegador considera o site instalável (evento `beforeinstallprompt`); clicar nele abre o prompt nativo do Android para adicionar à tela inicial. No iOS/Safari não existe esse prompt automático — a pessoa precisa usar Compartilhar → Adicionar à Tela de Início manualmente (os metadados `apple-touch-icon`/`apple-mobile-web-app-*` no `<head>` cuidam do ícone e do modo tela cheia nesse caso).

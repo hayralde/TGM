@@ -1,5 +1,5 @@
-const CACHE_NAME = 'tgm-shell-v2';
-const SHELL_FILES = ['./', './index.html', './manifest.json', './favicon.svg', './icon-192.png', './icon-512.png'];
+const CACHE_NAME = 'tgm-shell-v3';
+const SHELL_FILES = ['./', './index.html', './backup.html', './manifest.json', './favicon.svg', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
